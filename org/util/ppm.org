@@ -1,0 +1,121 @@
+
+* PPM P3
+PPM is a simple image format, based on Ascii. It is easy to read and can be recognized by amost image software like PS. I use it as a tool to generate rendering result.
+
+PPM, especially, P3 with a simple format as following:
+#+begin_src ppm
+ P3 # magic identifier for P3
+ 64 # width
+ 64 # height
+ 255 # max value of each component of pixel, must be stored in a standard integer
+ 0 0 255 # first pixel 
+ 0 0 255 # second pixel 
+ # rest pixels ...
+#+end_src
+
+
+
+* Module Definition
+Let us use Lua Module to define the Vec type. 
+#+BEGIN_SRC lua :tangle ../../src/util/ppm.lua 
+  local Vec = require("vec")
+  <<PPM_definition>>
+  return PPM
+#+END_SRC
+
+* PPM Definition
+Let ues define a class for using.
+#+NAME: PPM_definition
+#+begin_src lua :noweb-ref cg-type
+  PPM = {}
+  PPM.__index = PPM
+  PPM.magic = 'P3'
+
+  function PPM.new(w, h)
+    if not w or not h then error("Width and Height of PPM must given.") end
+
+    local img = {}
+    img.width = w 
+    img.height = h
+    img.pixels = {} -- Array to store pixel, all elems are Color type
+    <<fill_pixels_with_blank_color>>
+
+    img.max_value = 255 -- 8 channel Color with RGB
+
+    setmetatable(img, PPM)
+    return img
+  end
+
+  <<save>>
+  <<set>>
+  <<get>>
+#+end_src
+
+#+NAME: fill_pixels_with_blank_color
+#+begin_src lua
+  for row = 1, img.width do
+     for col = 1, img.height do
+        img.pixels[col + (row - 1) * img.width] = Vec.new(0, 0, 0)
+     end
+  end
+#+end_src
+
+!!! Notice: PPM does not support alpha channel.
+
+#+NAME: save
+#+begin_src lua
+  function PPM:save(path)
+    local f = io.open(path, 'w')
+      <<save_header_info>>
+      <<save_pixels>>
+    f:close()
+  end
+#+end_src
+
+#+NAME: save_header_info
+#+begin_src lua
+    f:write(PPM.magic .. '\n')
+    f:write(self.width .. '\n')
+    f:write(self.height .. '\n')
+    f:write(self.max_value .. '\n')
+#+end_src
+
+#+NAME: save_pixels
+#+begin_src lua
+  for i = 1, #(self.pixels) do
+    local p = self.pixels[i]
+    local r = math.floor(p:r())  
+    local g = math.floor(p:g())  
+    local b = math.floor(p:b())
+
+    r = ((r > self.max_value) and 255) or r
+    g = ((g > self.max_value) and 255) or g
+    b = ((b > self.max_value) and 255) or b
+
+    f:write( r .. " " .. g .. " " .. b  .. '\n')
+  end
+#+end_src
+
+set() for assigning value to a pixel.
+#+NAME: set
+#+begin_src lua
+  function PPM:set(row, col, color)
+      <<out_of_bound>>
+      self.pixels[col + (row - 1) * self.width] = color
+  end
+#+end_src
+
+set() for accessing a pixel
+#+NAME: get
+#+begin_src lua
+  function PPM:get(row, col)
+      <<out_of_bound>>
+      return self.pixels[col + (row - 1) * self.width] 
+  end
+#+end_src
+
+
+#+NAME: out_of_bound
+#+begin_src lua
+  if row > self.height or col > self.width then error("Out of bounds of PPM image. ") end
+#+end_src

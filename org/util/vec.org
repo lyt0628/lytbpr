@@ -1,0 +1,542 @@
+
+* Description
+** Vec(Vector) Abstract
+#+BEGIN_SRC plantuml :eval yes :result file :file ./asset/class_vec.png 
+  @startuml
+  class Vec{
+          classid = "Vec"
+          <<puml_fields>>
+          <<puml_methods>>
+          <<puml_operators>>
+  }
+
+  @enduml
+#+END_SRC
+
+#+RESULTS:
+[[file:./asset/class_vec.png]]
+
+
+** Fields
+#+NAME: puml_fields
+#+BEGIN_SRC plantuml 
+  elems : number
+#+END_SRC
+elems is a list of number, you can access a element by __index operator, like
+src_<lua>{v[1]}, which is same as src_<lua>{v.elems[1]}.But you cannot assgin
+a value to a part of vector. like src_<lua>{v[1] = "a value"}. The assignment
+will triger error, cause Vec is state-fixed.
+#+BEGIN_SRC lua
+  local Vec = require("Vec")
+
+  v = Vec.new(1, 2. 3)
+  v[1] = 6 -- Error!!! Vec is state-fixed
+#+END_SRC
+
+But you can get state by accessing elems in Vec instance. Or using [[with()]] to get
+new Vec from old one.
+
+** Methods
+:PROPERTIES:
+:header-args: :noweb-ref puml_methods
+:END:
+*** with()
+#+BEGIN_SRC plantuml 
+with : (idx:number, value:number):Vec
+#+END_SRC
+Return a new Vec with value in position of idx. with() can get new one with a different
+element, If a whole different Vec is wanted, you should construct new one.
+
+*** add()
+#+BEGIN_SRC plantuml 
+add : (other:Vec):Vec
+#+END_SRC
+Add self with other vector, and return the added result.
+Notice, The vecs of self is not changed, cause *all APIs are pure function*.
+
+*** sub()
+#+BEGIN_SRC plantuml
+sub : (other:Vec):Vec
+#+END_SRC
+subtract self with other vector, and return the result. The parameter is rhv
+, that is, in math expression, *result = self - other*.
+
+*** mul() And div()
+#+BEGIN_SRC plantuml 
+mul : (other:Vec):Vec
+div : (other:Vec):Vec
+#+END_SRC
+multiply or divide self with other vector by index, and return the result. The parameter is rhv
+, that is, in math expression, *result[i] = self[i] * other[i]*, and gather the results into a new
+vector.
+
+
+
+
+* Code
+** Module
+#+BEGIN_SRC lua :tangle ../../src/util/vec.lua
+  <<M>>
+  return M
+#+END_SRC
+
+** Vec Definition
+#+NAME: M
+#+BEGIN_SRC lua 
+  local M = {}
+  M.classid = "Vec"
+
+  <<members_of_vec>>
+#+END_SRC
+
+** Members Of Vec
+:PROPERTIES: 
+:header-args: :noweb-ref members_of_vec
+:END:
+
+*** new()
+new() Method is a *static factory method* to create new Vec instance, which is subtable of Vec also.
+#+begin_src lua 
+  function M.new(...) 
+     <<!new:vector_cannot_be_empty>>
+     local elems = {...}
+     local v= {elems = elems}
+     setmetatable(v, M)
+     return v
+  end
+#+end_src
+For simple, i put all error check into last section [[Errors]].
+
+We using *property elems* to store the compoents of Vec, and set Vec as meta table of new table.
+At least, Vec holds one element. so, src_<lua>{local c =Vec.new()} is invalid.
+
+*** get()
+#+BEGIN_SRC lua
+  function M:get(idx)
+    <<!get:index_is_required>>
+    <<!get:index_out_of_bound>>
+    return self.elems[idx]
+  end
+#+END_SRc
+
+*** with()
+#+begin_src lua
+  function M:with(idx, value)
+    <<!get:index_is_required>>
+    <<!get:index_out_of_bound>>
+
+    local result = self:clone()
+    result.elems[idx] = value
+
+    return result
+  end
+#+end_src
+
+*** size()
+#+begin_src lua
+  function M:size()
+    return #(self.elems)
+  end
+#+end_src
+
+*** add() 
+Vector add is add elem by position.
+#+begin_src lua
+  function M:add(other)
+    <<!add:length_of_components_must_equal>>
+
+    local result = {}
+    for i = 1, self:size() do
+      result[i] = self:get(i) + other:get(i)
+    end
+    return M.new(table.unpack(result))
+  end
+#+end_src
+
+*** sub()
+#+begin_src lua
+  function M:sub(other)
+    <<!sub:length_of_components_must_equal>>
+
+    local result = {}
+    for i = 1, self:size() do
+      result[i] = self[i] - other[i] 
+    end
+
+    return M.new(table.unpack(result))
+  end
+#+end_src
+
+*** mul() 
+#+BEGIN_SRC lua
+  function M:mul(other)
+    <<!mul:length_of_components_must_equal>>
+
+    local result = {}
+    for i = 1, self:size() do
+      result[i] = self[i] * other[i] 
+    end
+    return M.new(table.unpack(result))
+  end
+#+END_SRC
+
+*** div()
+#+BEGIN_SRC lua
+  function M:div(other)
+    <<!div:length_of_components_must_equal>>
+
+    local result = {}
+    for i = 1, self:size() do
+      result[i] = self[i] / other[i] 
+    end
+
+    return M.new(table.unpack(result))
+  end
+#+END_SRC
+
+*** scale()
+#+begin_src lua
+  function M:scale(scalar)
+    local result = {}
+    for i = 1, self:size() do
+       result[i]= self.elems[i] * scalar
+    end
+    return M.new(table.unpack(result))
+  end
+#+end_src
+
+*** normilzed()
+#+BEGIN_SRC  lua
+  function M:normlized()
+    local result = {}
+    local len = #self
+    for i = 1, self:size() do
+       result[i]= self.elems[i] / len
+    end
+    return M.new(table.unpack(result))
+  end
+#+END_SRC
+*** dot()
+#+begin_src lua
+   function M:dot(other)
+    <<!dot:length_of_components_must_equal>>
+    local sum = 0
+    for i = 1, self:size() do
+       sum = sum + self[i] * other[i]
+    end
+    return sum
+  end   
+#+end_src
+
+*** clone()
+#+BEGIN_SRC lua
+  function M:clone()
+     local result = {}
+     table.move(self.elems, 1, self:size(), 1, result)
+     return M.new(table.unpack(result))
+  end
+#+END_SRC
+
+*** slice()
+#+begin_src lua
+  function M:slice(startIdx, endIdx)
+     local elems = {}
+     table.move(self.elems, startIdx, endIdx, 1, elems)
+     return M.new(table.unpack(elems))
+  end 
+#+end_src
+
+*** concat()
+#+BEGIN_SRC lua
+  function M:concat(other)
+     local elems = {}
+     table.move(self.elems, 1, self:size(), 1, elems)
+     table.move(other.elems, 1, other:size(), self:size() + 1, elems)
+     return M.new(table.unpack(elems))
+  end 
+#+END_SRC
+
+*** Semantic Accessor
+#+begin_src lua
+    -- Used for location
+    function M:x() return self[1] end
+    function M:y() return self[2] end
+    function M:z() return self[3] end
+    function M:w() return self[4] end
+
+
+    function M:xy() return M.new(self:x(), self:y()) end
+    function M:yz() return M.new(self:y(), self:z()) end
+    function M:zw() return M.new(self:z(), self:w()) end
+
+    function M:xyz() return M.new(self:x(), self:y(), self:z()) end
+    -- Used for color
+    function M:r() return self[1] end
+    function M:g() return self[2] end
+    function M:b() return self[3] end
+    function M:a() return self[4] end
+
+    function M:rgb() return Vec.new(self:r(), self:g(), self:b()) end
+    -- Used for texture
+    function M:s() return self[1] end
+    function M:t() return self[2] end
+    function M:p() return self[3] end
+    function M:q() return self[4] end
+
+    function M:st() return M.new(self:s(), self:t()) end
+    function M:pq() return M.new(self:p(), self:q()) end
+#+end_src
+
+
+
+*** cross3()
+#+BEGIN_SRC lua
+   function M.cross3(one, other)
+    local x = one:y() * other:z() - one:z() * other:y()
+    local y = one:z() * other:x() - one:x() * other:z()
+    local z = one:x() * other:y() - one:y() * other:x()
+
+    return M.new(x, y, z)
+  end   
+#+END_SRC
+
+*** Operator Overload
+**** __index
+#+begin_src lua
+  function M.__index(t, key)
+     local result
+     if type(key) == "number" then
+       <<__index:get_component_of_vector>>
+     elseif rawget(t, key) then
+        <<__index:get_member_from_instance>>
+     else
+        <<__index:get_member_from_metatable>>
+     end
+     return result
+  end
+#+end_src
+
+***** Substeps
+:PROPERTIES: 
+:header-args: :noweb-ref _ 
+:END:
+
+If index key is a number, Vec will think clint want to find element.
+#+NAME: __index:get_component_of_vector
+#+BEGIN_SRC lua
+  result = t:get(key)
+#+END_SRC
+
+otherwise, client we to find member that is a normal member of table.
+If the member can be found in current table, return it.
+#+NAME: __index:get_member_from_instance
+#+begin_src lua
+  result = rawget(t, key)
+#+end_src
+
+otherwise, we get it from metatable, that is class in OOP.
+#+NAME: __index:get_member_from_metatable
+#+begin_src lua
+  result = rawget(M, key)
+#+end_src
+
+**** __concat
+
+#+begin_src lua
+  function M.__concat(lhv, rhv)
+     return lhv:concat(rhv)
+  end
+#+end_src
+
+**** __len
+The length of vector is a sqrt of sum of all elements.
+#+begin_src lua
+  function M.__len(v)
+    local sum = 0
+    for i = 1, v:size() do
+       sum = sum + v[i]^2
+    end
+    return math.sqrt(sum)
+  end
+#+end_src
+
+**** __add
+we just delegate all add/sub/div to the function.Those operation only meaningful between vectors.
+We simply apply operation in component by index.
+
+Vec + Vec
+#+begin_src lua
+  function M.__add(lhv, rhv)
+    return lhv:add(rhv)
+  end
+#+end_src
+
+**** __sub
+Vec - Vec
+#+begin_src lua
+  function M.__sub(lhv,rhv)
+    return lhv:sub(rhv)
+  end
+#+end_src
+
+**** __div
+Vec / Vec
+#+begin_src lua
+  function M.__div(lhv,rhv)
+     local result
+     if type(rhv) == "number" then
+        if rhv == 0 then error("divided by zero") end
+        result = lhv:scale(1/rhv)
+     else
+        result = lhv:div(rhv)
+     end
+     return result
+  end
+#+end_src
+
+***** __mul Substeps
+:PROPERTIES: 
+:header-args: :noweb-ref _ 
+:END:
+
+
+**** __mul
+Multiply operation is more complex than others, cause Multiply operation not only can be applied between vectors, but between vector and number
+#+begin_src lua
+  function M.__mul(lhv, rhv)
+    local result
+    <<__mul:when_multiply_between_number_and_vector>>
+    <<__mul:when_multiply_between_vectors>>
+    return result
+  end
+#+end_src
+
+***** __mul Substeps
+:PROPERTIES: 
+:header-args: :noweb-ref _ 
+:END:
+
+#+NAME: __mul:when_multiply_between_number_and_vector
+#+begin_src lua
+     if type(lhv) == "number" then
+        return rhv:scale(lhv)
+     elseif type(rhv) == "number" then
+        return lhv:scale(rhv)
+     end
+#+end_src
+
+#+NAME: __mul:when_multiply_between_vectors
+#+BEGIN_SRC lua
+     result = lhv:mul(rhv)
+#+END_SRC
+
+
+
+#+BEGIN_SRC lua
+  function M:get(idx)
+    <<!get:index_is_required>>
+    <<!get:index_out_of_bound>>
+    return self.elems[idx]
+  end
+#+END_SRc
+
+*** Utils
+**** to_str
+#+BEGIN_SRC lua
+  function M:to_str()
+    local s = "[ "
+    for i = 1, self:size() do
+       s = s .. self:get(i) .. ", " 
+    end
+    s = s .. "]"
+    return s
+  end
+#+END_SRc
+
+
+
+* Errors
+** new()
+#+NAME: !new:vector_cannot_be_empty
+#+begin_src lua
+  if not ...  then
+     error("[Vec.new] vector cannot be empty!")
+  end
+#+end_src
+We simply check if arguments is not nil and empty. Lua is a dynamic language, we cannot check code too detailed.
+
+** get()
+#+NAME: !get:index_is_required
+#+begin_src lua
+  if not idx then
+     error("[Vec:get] index of element is required as paramter!")
+  end
+#+end_src
+
+#+NAME: !get:index_out_of_bound
+#+begin_src lua
+  if idx > self:size() then
+     error("[Vec:get] index out of bound!")
+  end
+#+end_src
+
+** with()
+#+NAME: !with:index_is_required
+#+begin_src lua
+  if not idx then
+     error("[Vec:with] index of element is required as paramter!")
+  end
+#+end_src
+
+#+NAME: !with:index_out_of_bound
+#+begin_src lua
+  if idx > self:size() then
+     error("[Vec:with] index out of bound!")
+  end
+#+end_src
+
+** add()
+#+name: !add:length_of_components_must_equal
+#+begin_src lua
+  if(self:size() ~= other:size()) then
+    error("[vec:add] length of component of vec must equal!")
+  end
+#+end_src
+
+
+** sub()
+#+NAME: !sub:length_of_components_must_equal
+#+BEGIN_SRC lua
+  if(self:size() ~= other:size()) then
+    error("[vec:sub] length of component of vec must equal!")
+  end
+#+END_SRC
+
+** mul()
+#+NAME: !mul:length_of_components_must_equal
+#+BEGIN_SRC lua
+  if(self:size() ~= other:size()) then
+    error("[vec:mul] length of component of vec must equal!")
+  end
+#+END_SRC
+
+** div()
+#+NAME: !div:length_of_components_must_equal
+#+BEGIN_SRC lua
+  if(self:size() ~= other:size()) then
+    error("[vec:div] length of component of vec must equal!")
+  end
+
+#+END_SRC
+
+** dot()
+#+NAME: !dot:length_of_components_must_equal
+#+BEGIN_SRC lua
+  if(self:size() ~= other:size()) then
+    error("[vec:dot] length of component of vec must equal!")
+  end
+
+#+END_SRC
+
+
+

@@ -1,0 +1,900 @@
+
+* Api Document
+** Mat(Matrix) Abstract
+#+BEGIN_SRC plantuml :eval yes :result file :file ./asset/class_mat.png 
+  @startuml
+  class Mat{
+          classid = "Mat"
+          <<puml_fields>>
+          <<puml_methods>>
+          <<puml_operators>>
+  }
+
+  @enduml
+#+END_SRC
+
+#+RESULTS:
+[[file:./asset/class_mat.png]]
+
+
+
+** Fields Of Mat
+#+NAME: puml_fields
+#+BEGIN_SRC plantuml 
+  vecs : Vec
+#+END_SRC
+
+The only field of Mat is a vecs, that is a list of [[./vec.org][Vector]]. Those vectors are
+stores by column. So src_<lua>{mat[1]} get the first column vector. Cause Vec
+overload __index operator also, src_<lua>{mat[1][1]} will return the element
+that is in index <1,1>. Mat is pure class, no direct API to modify inner states,
+if you do want to do it, access vecs directly(not recommended).
+
+** Methods Of Mat
+:PROPERTIES:
+:header-args: :noweb-ref puml_methods
+:END:
+*** add()
+#+BEGIN_SRC plantuml 
+add : (other:Mat):Mat
+#+END_SRC
+Add self with other vector, and return the added result.
+Notice, The vecs of self is not changed, cause *all APIs are pure function*.
+
+*** sub()
+#+BEGIN_SRC plantuml
+sub : (other:Mat):Mat
+#+END_SRC
+subtract self with other vector, and return the result. The parameter is rhv
+, that is, in math expression, *result = self - other*.
+
+*** mul() 
+#+BEGIN_SRC plantuml 
+mul : (other:Mat):Mat
+#+END_SRC
+multiply or divide self with other vector by , and return the result. The parameter is rhv
+, that is, in math expression, *result = self / other*.
+
+
+
+** Operators
+#+NAME: puml_fields
+#+BEGIN_SRC plantuml 
+
+#+END_SRC
+
+
+
+* Code
+
+** Module
+#+BEGIN_SRC lua :tangle ../../src/util/mat.lua  :comments both 
+  local luautil = require "luautil"
+  local Vec = require "Vec"
+
+  <<M>>
+  return M
+#+END_SRC
+
+** Mat Definition
+#+NAME: M
+#+BEGIN_SRC lua 
+  local M = {}
+  M.classid = "Mat"
+  <<members_of_mat>>
+#+END_SRC
+
+** Members Of Vec
+:PROPERTIES: 
+:header-args: :noweb-ref members_of_mat 
+:END:
+
+*** new()
+We use [[id:d924a8ba-5060-44f6-8023-b4cae6ae7d5f][cg-vector]] to store elements by column, but the param rows is a table that store subtable with elements by row.
+So, we should convert that to col vector and store the result.
+#+BEGIN_SRC lua :comments both 
+  function M.new(rows) 
+     <<!new:size_of_rows_should_be_same>>
+     local vecs = {}
+     <<new:convert_rows_to_col_vec>>
+     local mat = {vecs = vecs}
+     setmetatable(mat, M)
+     return mat
+  end
+#+END_SRC
+
+**** new:convert_rows_to_col_vec
+:PROPERTIES: 
+:header-args: :noweb-ref new:convert_rows_to_col_vec
+:END:
+
+First, we get amount of rows and cols.
+#+begin_src lua 
+  local nrows = #(rows)
+  local ncols = #(rows[1])
+#+end_src
+
+And range by cols to get elem and put it into a Vec.
+#+begin_src lua 
+  for c = 1, ncols do
+    local col = {}
+    for r = 1, nrows do
+      col[r] = rows[r][c]
+    end
+    vecs[c] = Vec.new(table.unpack(col))
+  end
+#+end_src
+
+*** from_vecs()
+If col vectors were prepared by client, just store it.
+#+begin_src lua
+  function M.from_vecs(vecs)
+     <<!from_vecs:vecs_must_hold_same_amount_of_elems>>
+    local mat = {vecs = vecs}
+    setmetatable(mat, M)
+    return mat
+  end
+#+end_src
+
+*** from_elems()
+#+BEGIN_SRC lua
+  function M.from_elems(elems, nrow)
+    <<!from_elems:amout_of_elems_must_be_divided_just>>
+    local rows = {}
+    <<from_elems:store_elems_row_by_row>>
+    return M.new(rows)
+  end
+#+END_SRC
+
+#+NAME: from_elems:store_elems_row_by_row 
+#+BEGIN_SRC lua :noweb-ref 
+  local ncol = #(elems) / nrow;
+  for r = 1, nrow do
+    local row = {}
+    for c = 1, ncol do
+        row[c] = elems[c + (r - 1) * ncol]
+    end
+    rows[r] = row
+  end
+#+END_SRC
+
+*** get()
+#+begin_src lua
+  function M:get(row,col)
+     <<!get:row_and_col_cannot_be_empty>>
+     <<!get:position_cannot_out_of_bound>>
+     return self.vecs[col]:get(row)
+  end
+#+end_src
+
+*** with()
+#+begin_src lua
+  function M:with(row, col, value)
+     <<!with:row_and_col_cannot_be_empty>>
+     <<!with:position_cannot_out_of_bound>>
+     local result = self:clone()
+     result.vecs[col].elems[row] = value
+     return result
+  end
+#+end_src
+
+*** with_col()
+#+begin_src lua
+  function M:with_col(col, value)
+     local result = self:clone()
+     result.vecs[col] = value
+     return result
+  end
+#+end_src
+
+*** with_row()
+#+begin_src lua
+  function M:with_row(row, value)
+     <<!with_row:row_cannot_out_of_bound>>
+     local result = self:clone()
+     for c = 1, self:cols() do
+        result.vecs[c].elems[row] = value:get(c)
+     end
+     return result
+  end
+#+end_src
+
+*** cols()
+#+begin_src lua
+  function M:cols()
+    return #(self.vecs)
+  end
+#+end_src
+
+*** rows()
+#+begin_src lua
+  function M:rows()
+    return self.vecs[1]:size()
+  end
+#+end_src
+
+*** col()
+#+begin_src lua
+  function M:col(c)
+    return self.vecs[c]:clone()
+  end
+#+end_src
+
+*** row()
+#+begin_src lua
+  function M:row(r)
+     local elems = {}
+
+     for i = 1, self:cols() do
+       elems[i] = self:get(r,i)
+     end
+     return Vec.new(table.unpack(elems))
+  end
+#+end_src
+
+*** add()
+#+begin_src lua
+  function M:add(other)
+    <<!add:the_shape_of_mat_must_be_same>>
+    local vecs = {}
+    for i = 1, self:cols() do
+        vecs[i] = self.vecs[i]:add(other.vecs[i])
+    end
+    return M.from_vecs(vecs)
+  end
+#+end_src
+
+*** sub()
+#+begin_src lua
+  function M:sub(other)
+    <<!sub:the_shape_of_mat_must_be_same>>
+    local vecs = {}
+    for i = 1, self:cols()  do
+        vecs[i] = self.vecs[i]:sub(other.vecs[i])
+    end
+    return M.from_vecs(vecs)
+  end
+#+end_src
+
+*** clone()
+#+begin_src lua
+  function M:clone()
+    local vecs = {}
+    for i,v in ipairs(self.vecs) do
+      table.insert(vecs, v:clone())
+    end
+    return M.from_vecs(vecs)
+  end
+#+end_src
+
+*** scale()
+#+begin_src lua
+  function M:scale(scalar)
+    local vecs = {}
+    for i = 1, self:cols() do
+       vecs[i] = self:col(i):scale(scalar)
+    end
+    return M.from_vecs(vecs)
+  end
+#+end_src
+
+*** T()
+#+begin_src lua
+  function M:T()
+    local elems = {}
+    for c = 1, self:cols() do
+     local col_elems = self:col(c).elems
+     table.move(col_elems, 1, #col_elems, #elems +1, elems)
+    end
+    return M.from_elems(elems, self:cols())
+  end
+#+end_src
+
+*** mul()
+#+begin_src lua
+  function M:mul(other)
+    <<!mul:matrix_multyply_need_amount_of_cols_of_left_hand_value_eq_to_rows_of_right_hand_value>>
+    local nrow = other:rows()
+    local ncol = self:cols()
+    local elems = {}
+
+    for r = 1, nrow do
+       for c = 1, ncol do
+         elems[c + (r - 1) * ncol] = other:row(r):dot(self:col(c))
+       end
+    end
+    
+    return Mat.from_elems(elems, nrow)
+  end
+#+end_src
+
+**transform()
+#+begin_src lua
+  function M:mul_with_vec(vec)
+     local mat = Mat.from_vecs({vec})
+     mat = mat:mul(self)
+     return mat:col(1)
+  end
+#+end_src
+
+*** slice()
+#+begin_src lua
+  function M:slice(r1, c1, r2, c2)
+    local vecs = {}
+    for i = c1, c2 do
+      table.insert(vecs, self:col(i):clone())
+    end
+
+    for i,v in ipairs(vecs) do
+       vecs[i] = v:slice(r1, r2)
+    end
+    return Mat.from_vecs(vecs)
+  end
+#+end_src
+
+*** augmented
+#+begin_src lua
+  function M:augmented(vecs)
+     <<!augmented:amount_of_row_vec_should_be_same_as_mat>>
+     local result = self:clone()
+     table.move(vecs, 1, #(vecs), result:cols() + 1, result.vecs)
+     return result
+  end
+#+end_src
+
+*** swap_row()
+#+begin_src lua
+  function M:swap_row(r1, r2)
+    local result = self:with_row(r1,self:row(r2))
+    result = result:with_row(r2,self:row(r1))
+    return result
+  end
+#+end_src
+
+*** scale_row()
+#+begin_src lua
+  function M:scale_row(r, scalar)
+    local result = self:clone()
+    local row = result:row(r) * scalar
+
+    return result:with_row(r,row)
+  end
+#+end_src
+
+*** add_to_row()
+#+begin_src lua
+  function M:add_to_row(r,vec)
+     local result = self:clone()
+     local row = result:row(r):add(vec)
+
+    return result:with_row(r,row)
+  end
+#+end_src
+
+*** identity()
+#+begin_src lua
+  function M:identity()
+     <<only_meaningful_for_square_matrix>>
+     local dimension = self:cols()
+     elems = {}
+     for r = 1, dimension do
+         for c = 1, dimension do
+             elems[c + (r-1)*dimension] = ((r == c) and 1) or 0
+         end
+     end
+     return Mat.from_elems(elems, dimension)
+  end
+#+end_src
+
+*** cofactor()
+#+begin_src lua
+  function M:cofactor(row, col)
+     <<only_meaningful_for_square_matrix>>
+     <<Position_Should_Not_Out_Of_Bound_Of_Matrix>>
+     local result = self:clone()
+
+     result.vecs[col] = nil
+     result.vecs = luautil.remove_hole(result.vecs)
+
+     for i = 1, result:cols() do
+        result.vecs[i].elems[row] = nil
+        result.vecs[i].elems = luautil.remove_hole(result.vecs[i].elems)
+     end
+     return result
+  end
+#+end_src
+*** algebraic_cofactor()
+#+begin_src lua
+  function M:algebraic_cofactor(row, col)
+     local result = self:cofactor(row,col)
+     local r = result:row(1) * math.pow(-1, row + col)
+     return result:with_row(1, r)
+  end
+#+end_src
+
+*** det()
+For a 1-rank Matrix the element is its determinant,
+For 2-rnak Matrix, we use Formula to compute,
+For other rank matrix, we expand recurly it by row, until 2-rank, or 1-rank.
+#+NAME: Mat:determinant
+#+begin_src lua
+  function M:det()
+     <<only_meaningful_for_square_matrix>>
+     local result = 0
+     if(self:rows() == 1) then
+        <<determinant_for_1rank_matrix>>
+     elseif (self:rows() == 2) then
+        <<determinant_for_2rank_matrix>>
+     else
+        <<expand_matrix_by_row_to_compute_determinant>>
+     end
+     return result
+  end
+#+end_src
+
+**** For 1-rank Matrix
+#+NAME: determinant_for_1rank_matrix
+#+begin_src lua :noweb-ref _
+  result =self[1][1]
+#+end_src
+**** For 2-rank Matrix
+#+NAME: determinant_for_2rank_matrix
+#+begin_src lua :noweb-ref _
+  result = self[1][1] * self[2][2] - self[1][2] *  self[2][1]
+#+end_src
+**** For Heiher Rank matrix
+We awlay expand the first row
+#+NAME: expand_matrix_by_row_to_compute_determinant
+#+begin_src lua :noweb-ref _
+  for c = 1, self:cols() do
+    local a = self:algebraic_cofactor(1,c)
+    local elem = self[1][c]
+    a = a:with_row(1, a:row(1) * elem)
+    result = result +  a:det()
+  end
+#+end_src
+
+*** reduced()
+#+begin_src lua
+  function M:reduced()
+     local mat = self:clone()
+     local times = math.min(self:rows(),self:cols())
+
+     local r = 1
+     for c = 1, times do
+         <<sure_head_elem_not_zero>>
+         <<make_head_elem_identity>>
+         <<make_other_elems_in_the_col_zero>>
+
+         r = r + 1 -- Increase current row to put head elem
+         ::continue::
+     end
+     return mat
+  end
+#+end_src
+
+#+NAME: sure_head_elem_not_zero
+#+begin_src lua :noweb-ref _
+  if mat[r][c] == 0 then
+     local row = 0 -- Init with 0, that is not found
+     for j = r + 1, mat:rows() do 
+        if(mat[j][c] ~= 0) then
+            row = j
+            break
+        end
+     end
+     if(row == 0) then -- Not Found
+        goto continue
+     else
+        mat = mat:swap_row(r, row)
+
+     end
+ --[[
+    print(mat[1][1],mat[1][2], mat[1][3])
+    print(mat[2][1],mat[2][2], mat[2][3])
+    print(mat[3][1],mat[3][2], mat[3][3])
+    print("---------------------------")
+  --]]
+  end
+#+end_src
+
+#+NAME: make_head_elem_identity
+#+begin_src lua :noweb-ref _
+  -- When Matrix is not full rank, maybe no head elem, mat[r][c] will be zero in last row
+  if(mat[r][c] ~= 1 and mat[r][c] ~= 0) then
+     mat = mat:scale_row(r, 1 / mat:get(r, c))
+  end
+#+end_src
+
+#+NAME: make_other_elems_in_the_col_zero
+#+begin_src lua :noweb-ref _
+  for j = 1, self:rows() do
+    if(j ~= r and mat[j][c] ~=0) then
+     local v = mat:row(r)
+     v = v:scale(-1 * mat:get(j, c))
+     mat = mat:add_to_row(j ,v)
+    end
+  end
+#+end_src
+
+*** simplified()
+#+begin_src lua
+  function M:simplified()
+     local mat = self:clone()
+     local times = math.min(self:rows(),self:cols())
+
+     local r = 1
+     for c = 1, times do
+         <<sure_head_elem_not_zero>>
+         <<make_head_elem_identity>>
+         <<make_other_elems_under_head_elem_in_the_col_zero>>
+
+         r = r + 1 -- Increase current row to put head elem
+         ::continue::
+  --[[
+    print(mat[1][1],mat[1][2], mat[1][3])
+    print(mat[2][1],mat[2][2], mat[2][3])
+    print(mat[3][1],mat[3][2], mat[3][3])
+    print("---------------------------")
+  --]]
+  
+     end
+     return mat
+  end
+#+end_src
+
+#+NAME: make_other_elems_under_head_elem_in_the_col_zero
+#+begin_src lua :noweb-ref _
+  for j = r + 1, self:rows() do
+    if(mat[j][c] ~=0) then
+     local v = mat:row(r)
+     v = v:scale(-1 * mat:get(j, c))
+     mat = mat:add_to_row(j ,v)
+    end
+  end
+#+end_src
+
+*** rank()
+#+BEGIN_SRC lua
+  function M:rank()
+     local mat = self:T()
+     mat = mat:simplified()
+
+     local rank = mat:rows()
+     for r = mat:rows(), 1, -1 do
+        for c = mat:cols(), 1, -1 do
+           if (mat[r][c] ~= 0 ) then goto END end
+        end
+        rank = rank - 1
+     end
+     ::END::
+     return rank
+  end
+#+END_SRC
+
+*** inverse()
+We use Gauss-Jordan to compute inverse of matrix
+#+begin_src lua
+  function M:inverse()
+     <<only_meaningful_for_square_matrix>>
+     <<singular_matrix_has_no_inverse>>
+     local mat = self .. self:identity()
+     mat = mat:simplified()
+
+     local dimension = self:cols()
+     return mat:slice(1, dimension + 1, dimension, 2*dimension)
+  end
+#+end_src
+
+*** ortho()
+#+begin_src lua
+  function M:ortho()
+     -- We Cound by row
+     local mat = self:T()
+     mat = mat:simplified()
+     local result = {}
+
+     <<ortho:fix_freedom>>
+     for r = rank, 1, -1 do
+        local value = 0
+        <<ortho:compute_symbol_value_in_head_elem>>
+        table.insert(result, value)
+     end 
+
+     result = luautil.reverse(result)
+     return Vec.new(table.unpack(result))
+  end
+#+end_src
+
+#+NAME: ortho:fix_freedom
+#+BEGIN_SRC  lua :noweb-ref _
+  local rank = self:rank()
+  <<ortho:full_rank_matrix_cannot_find_ortho>>
+  local freedom = self:cols() - rank + (self:rows() - self:cols()) -- Reserve for extra freedom for over-space
+  while freedom > 0 do
+     table.insert(result, 1)
+     freedom = freedom - 1
+  end
+#+END_SRC
+
+#+NAME: ortho:compute_symbol_value_in_head_elem
+#+BEGIN_SRC lua :noweb-ref _
+        local hit_head = false
+        for c = 1, mat:cols() do
+            if(hit_head) then
+                value = value - result[mat:cols() - c + 1] * mat[r][c]
+            end
+            if (not hit_head and mat[r][c] ~=0) then
+               hit_head = true
+            end
+        end
+#+END_SRC
+
+*** Operators
+**** __mul
+#+begin_src lua
+  function M.__mul(lhv, rhv)
+     if(lhv.classid == "Mat" and rhv.classid == "Mat") then
+        return rhv:mul(lhv)
+     elseif (lhv.classid == "Mat" and rhv.classid == "Vec") then
+        return lhv:mul_with_vec(rhv)
+     end
+     error("Invalid Operation")
+  end
+#+end_src
+
+**** __concat
+#+begin_src lua
+  function M.__concat(lhv, rhv)
+     if(lhv.classid == "Mat" and rhv.classid == "Mat") then
+        return lhv:augmented(rhv.vecs)
+     elseif (lhv.classid == "Mat" and rhv.classid == "Vec") then
+        return lhv:augmented({rhv})
+     end
+     error("Invalid Operation")
+  end
+#+end_src
+
+**** __pow
+#+begin_src lua
+  function M:__pow(power)
+     <<only_meaningful_for_square_matrix>>
+     local cnt = 1
+     local unit
+     local result
+     if(power > 0) then
+        unit = self:clone()
+        result = unit
+        while (cnt < power) do
+           result = result:mul(unit)
+           cnt = cnt + 1
+        end
+     elseif (power < 0 ) then
+        unit = self:inverse()
+        result = unit
+        power = math.abs(power)
+        while cnt < power do
+           result = result:mul(unit)
+           cnt = cnt + 1
+        end
+
+     else
+        error("Power cannot be zero")
+     end
+
+     return result
+  end
+#+end_src
+
+**** __index
+#+begin_src lua
+    function M.__index(t, key)
+       if type(key) == "number" then
+          -- If not found, nil will be returned.
+          return t:row(key)
+       elseif rawget(t, key) then
+          return rawget(t, key)
+       else
+          return rawget(M, key)
+       end
+
+    end
+#+end_src
+
+**** __add
+#+begin_src lua
+  function M.__add(lhv, rhv)
+    return lhv:add(rhv)
+  end
+#+end_src
+
+*** Utils
+**** to_str()
+#+BEGIN_SRC lua
+  function M:to_str()
+     local s = "[ "
+     for r = 1, self:rows() do
+         s = s .. "\n" .. self:row(r):to_str()
+     end
+     s = s .. "\n ]"
+     return s
+  end
+#+END_SRC
+
+* Errors
+If a Erro check dependents on the local state, We should prepare a individual snippet for it.
+** !new:size_of_rows_should_be_same
+#+NAME: !new:size_of_rows_should_be_same
+#+begin_src lua
+  if not rows or rows[1] == nil or rows[1][1] == nil then
+     error("Mat cannot be empty!")
+  end
+  local nelems = #(rows[1])
+  for i = 2, #(rows) do
+     if #(rows[i]) ~= nelems then
+        error("Size of rows should be same!")
+     end
+  end
+#+end_src
+
+** !from_vecs:vecs_must_hold_same_amount_of_elems
+#+NAME: !from_vecs:vecs_must_hold_same_amount_of_elems
+#+begin_src lua
+  if not vecs or vecs[1] == nil then
+     error("Mat cannot be empty!")
+  end
+
+  local nvecs = #(vecs)
+  local nds = vecs[1]:size()
+  for i = 1, nvecs do
+     if vecs[i]:size() ~= nds then
+        error("All vecs must hold same amount of elems!")
+     end
+  end
+#+end_src
+
+** !from_elems:amout_of_elems_must_be_divided_just
+#+NAME: !from_elems:amout_of_elems_must_be_divided_just
+#+begin_src lua
+  if(#(elems) % nrow ~= 0) then
+    error("Elems must be divided just")
+  end
+#+end_src
+
+** !get:row_and_col_cannot_be_empty
+#+NAME: !get:row_and_col_cannot_be_empty
+#+BEGIN_SRC lua
+  if (not row or not col) then
+     error("position row and col cannot be empty!")
+  end
+#+END_SRC
+
+** !get:position_cannot_out_of_bound
+#+NAME: !get:position_cannot_out_of_bound
+#+begin_src lua
+  if (row > self:rows() or col > self:cols()) then
+   error("target position cannot out of bound of matrix")
+  end
+#+end_src
+
+** !with:row_and_col_cannot_be_empty
+#+NAME: !with:row_and_col_cannot_be_empty
+#+BEGIN_SRC lua
+  if (not row or not col) then
+     error("position row and col cannot be empty!")
+  end
+#+END_SRC
+
+** !with:position_cannot_out_of_bound
+#+NAME: !with:position_cannot_out_of_bound
+#+begin_src lua
+  if (row > self:rows() or col > self:cols()) then
+   error("target position cannot out of bound of matrix")
+  end
+#+end_src
+
+** !with_row:row_cannot_out_of_bound
+#+NAME: !with_row:row_cannot_out_of_bound
+#+BEGIN_SRC  lua
+  if row > self:rows() then
+     error("[Mat:with_row] row cannot out of bound!")
+  end
+#+END_SRC
+
+** !add:the_shape_of_mat_must_be_same
+#+NAME: !add:the_shape_of_mat_must_be_same
+#+begin_src lua
+  if self:cols() ~= other:cols() or self:rows() ~= other:rows() then
+    error("The shape of Mat must be same!")
+  end
+#+end_src
+
+** !sub:the_shape_of_mat_must_be_same
+#+NAME: !sub:the_shape_of_mat_must_be_same
+#+begin_src lua
+  if self:cols() ~= other:cols() or self:rows() ~= other:rows() then
+    error("The shape of Mat must be same!")
+  end
+#+end_src
+
+** !mul:matrix_multyply_need_amount_of_cols_of_left_hand_value_eq_to_rows_of_right_hand_value
+#+NAME: !mul:matrix_multyply_need_amount_of_cols_of_left_hand_value_eq_to_rows_of_right_hand_value
+#+begin_src lua :noweb-ref _
+  if(other:cols() ~= self:rows()) then
+    error("Mat multyply need amount of cols of left hand value(as param) eq to rows of right hand value!")
+  end
+#+end_src
+
+** !augmented:amount_of_row_vec_should_be_same_as_mat
+#+NAME: !augmented:amount_of_row_vec_should_be_same_as_mat
+#+begin_src lua :noweb-ref _
+  if (not vecs or not vecs[1]) then  error("vecs should not be empty!") end
+  for i = 1, #(vecs) do
+    if (vecs[i]:size() ~= self:rows()) then error("amount of row of Vector should be same as Matrix") end
+  end
+#+end_src
+
+
+
+** add/sub:The_Shape_Of_Mat_Must_Be_Same
+#+NAME: add/sub:The_Shape_Of_Mat_Must_Be_Same
+#+begin_src lua
+  if self:cols() ~= other:cols() or self:rows() ~= other:rows() then
+    error("The shape of Mat must be same!")
+  end
+#+end_src
+
+** get/with:Position_Should_Not_Out_Of_Bound_Of_Matrix
+#+NAME: get/with:Position_Should_Not_Out_Of_Bound_Of_Matrix
+#+begin_src lua
+  if (not row or not col) then
+     error("position row and col cannot be empty!")
+  end
+  if ( row > self:rows() or col > self:cols()) then
+   error("Out of Bound of Matrix")
+  end
+#+end_src
+
+** augmented:Amount_Of_Row_Vec_Should_Be_Same_As_Mat
+#+NAME: augmented:Amount_Of_Row_Vec_Should_Be_Same_As_Mat
+#+begin_src lua 
+  if (not vecs or not vecs[1]) then  error("vecs should not be empty!") end
+  for i = 1, #(vecs) do
+    if (vecs[i]:size() ~= self:rows()) then error("amount of row of Vector should be same as Matrix") end
+  end
+#+end_src
+
+** only_meaningful_for_square_matrix
+#+NAME: only_meaningful_for_square_matrix
+#+begin_src lua
+  if(self:rows() ~= self:cols()) then
+    error("determinant only meaningful for square matrix!")
+  end
+#+end_src
+
+** Position_Should_Not_Out_Of_Bound_Of_Matrix
+#+NAME: Position_Should_Not_Out_Of_Bound_Of_Matrix
+#+begin_src lua
+  if (not row or not col) then
+     error("position row and col cannot be empty!")
+  end
+  if ( row > self:rows() or col > self:cols()) then
+   error("Out of Bound of Matrix")
+  end
+#+end_src
+
+** singular_matrix_has_no_inverse
+#+NAME: singular_matrix_has_no_inverse
+#+begin_src lua :noweb-ref _
+  if(self:det() == 0) then
+     error("Matrix is singular, haing no inversed matrix!")
+  end
+#+end_src
+
+** ortho:full_rank_matrix_cannot_find_ortho
+#+NAME: ortho:full_rank_matrix_cannot_find_ortho
+#+BEGIN_SRC lua 
+  if (rank == mat:cols()) then
+     error("[Mat#ortho()] Full rank matrix cannot find ortho")
+  end
+#+END_SRC

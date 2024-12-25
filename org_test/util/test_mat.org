@@ -1,0 +1,63 @@
+
+* Code
+** Module
+#+BEGIN_SRC lua :tangle ../../src/util/test_mat.lua  
+  local Vec = require("vec")
+  local Mat = require("mat")
+  <<test_cases>>
+#+END_SRC
+
+** Fixtures
+#+NAME: m3
+#+BEGIN_SRC lua
+    m3 = Mat.new({
+          {1, 2, 3},    
+          {4, 5, 6},    
+          {7, 8, 9},    
+    })
+#+END_SRC
+
+** Test Cases
+:PROPERTIES:
+:header-args: :noweb-ref test_cases
+:END:
+
+*** Test get()
+#+BEGIN_SRC lua
+  <<m3>>
+  assert(1==m3:get(1,1))
+  assert(6==m3:get(2,3))
+  assert(7==m3:get(3,1))
+#+END_SRC
+
+*** Test rank()
+#+BEGIN_SRC lua
+  <<m3>>
+  assert(2==m3:rank())
+#+END_SRC
+
+*** Test simplified()
+#+BEGIN_SRC lua
+  <<m3>>
+  m3 = m3:simplified()
+  assert(1 == m3[1][1])
+
+  assert(1 == m3[2][2])
+
+  assert(0 == m3[3][3])
+#+END_SRC
+
+
+*** Test reduced()
+#+BEGIN_SRC lua
+  <<m3>>
+  m3 = m3:reduced()
+  assert(1 == m3[1][1])
+  assert(0 == m3[1][2])
+
+  assert(0 == m3[2][1])
+  assert(1 == m3[2][2])
+
+  assert(0 == m3[3][1])
+  assert(0 == m3[3][2])
+#+END_SRC
