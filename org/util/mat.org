@@ -381,17 +381,10 @@ And range by cols to get elem and put it into a Vec.
          end
      end
      local result = M.from_elems(elems, dimension)
-     <<identity:cache>>
+     self.identity_ = result:clone()
      return result
   end
 #+end_src
-
-#+NAME: identity:cache
-#+BEGIN_SRC lua :noweb-ref _
-     if not self.identity_ then
-        self.identity = result:clone()
-     end
-#+END_SRC
 
 *** cofactor()
 #+begin_src lua
@@ -408,17 +401,9 @@ And range by cols to get elem and put it into a Vec.
         result.vecs[i].elems = luautil.remove_hole(result.vecs[i].elems)
      end
 
-     <<cofactor:cache>>
      return result
   end
 #+end_src
-
-#+NAME: cofactor:cache
-#+BEGIN_SRC lua :noweb-ref _
-  if not self.cofactor then
-     self.cofactor_ = result:clone()
-  end
-#+END_SRC
 
 *** algebraic_cofactor()
 #+begin_src lua
@@ -428,17 +413,9 @@ And range by cols to get elem and put it into a Vec.
 
      result = result:with_row(1, r)
 
-     <<algebraic_cofactor:cache>>
      return result
   end
 #+end_src
-
-#+NAME: algebraic_cofactor:cache
-#+BEGIN_SRC lua :noweb-ref _
-  if not self.algebraic_cofactor_ then
-     self.algebraic_cofactor_ = result
-  end
-#+END_SRC
 
 *** det()
 For a 1-rank Matrix the element is its determinant,
@@ -456,17 +433,10 @@ For other rank matrix, we expand recurly it by row, until 2-rank, or 1-rank.
         <<expand_matrix_by_row_to_compute_determinant>>
      end
 
-     <<det:cache>>
+     self.det_ = result
      return result
   end
 #+end_src
-
-#+NAME: det:cache
-#+BEGIN_SRC  lua :noweb-ref _
-  if not self.det_ then
-     self.det_ = result
-  end
-#+END_SRC
 
 **** For 1-rank Matrix
 #+NAME: determinant_for_1rank_matrix
@@ -506,7 +476,7 @@ We awlay expand the first row
          ::continue::
      end
 
-     <<reduced:cache>>
+     self.reduced_ = mat 
      return mat
   end
 #+end_src
@@ -514,7 +484,6 @@ We awlay expand the first row
 #+NAME: reduced:cache
 #+BEGIN_SRC lua :noweb-ref _
   if not self.reduced_ then
-     self.reduced = mat 
   end
 #+END_SRC
 
@@ -578,17 +547,10 @@ We awlay expand the first row
          ::continue::
      end
 
-     <<simplified:cache>>
+     self.simplified_ = mat
      return mat
   end
 #+end_src
-
-#+NAME: simplified:cache
-#+BEGIN_SRC lua :noweb-ref _
-  if self.simplified_ then
-     self.simplified_ = mat
-  end
-#+END_SRC
 
 #+NAME: make_other_elems_under_head_elem_in_the_col_zero
 #+begin_src lua :noweb-ref _
@@ -616,16 +578,9 @@ We awlay expand the first row
      end
      ::END::
 
-     <<rank:cache>>
+     self.rank_ = rank
      return rank
   end
-#+END_SRC
-
-#+NAME: rank:cache
-#+BEGIN_SRC lua :noweb-ref _
-    if self.rank_ then
-       self.rank_ = rank
-    end
 #+END_SRC
 
 *** inverse()
@@ -640,17 +595,10 @@ We use Gauss-Jordan to compute inverse of matrix
      local dimension = self:cols()
      local result = mat:slice(1, dimension + 1, dimension, 2*dimension)
 
-     <<inverse:cache>>
+     self.inverse_ = result
      return result
   end
 #+end_src
-
-#+NAME: inverse:cache
-#+BEGIN_SRC lua :noweb-ref _
-  if not self.inverse_ then
-     self.inverse_ = result
-  end
-#+END_SRC
 
 *** ortho()
 #+begin_src lua
@@ -672,7 +620,7 @@ We use Gauss-Jordan to compute inverse of matrix
      result = luautil.reverse(result)
      result = Vec.new(table.unpack(result))
 
-     <<ortho:cache>>
+     self.ortho_ = result
      return result
   end
 #+end_src
@@ -700,27 +648,7 @@ We use Gauss-Jordan to compute inverse of matrix
         end
 #+END_SRC
 
-#+NAME: ortho:cache
-#+BEGIN_SRC lua :noweb-ref _
-  if not self.ortho_ then
-     self.ortho_ = result
-  end
-#+END_SRC
 
-*** cache()
-#+BEGIN_SRC lua
-  function M:cache()
-     self:identity()
-     self:cofactor()
-     self:algebraic_cofactor()
-     self:det()
-     self:simplified()
-     self:reduced()
-     self:rank()
-     self:inverse()
-     self:ortho()
-  end
-#+END_SRC
 
 *** Operators
 **** __mul

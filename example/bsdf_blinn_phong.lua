@@ -1,6 +1,6 @@
 -- Main Code Block
 
--- [[file:../org_example/bsdf_lambert.org::*Main Code Block][Main Code Block:1]]
+-- [[file:../org_example/bsdf_blinn_phong.org::*Main Code Block][Main Code Block:1]]
 package.path = package.path .. ";" .. "../src/util/?.lua"
 local Vec = require("vec")
 local Mat = require("mat")
@@ -14,11 +14,12 @@ local L = Vec.new(0, 0, 0)
 local L_c = Vec.new(255, 200, 100)
 
 -- A factor to modify light value
-local lambert_bsdf = Vec.new(36, 36, 36) * 3500000
+
+local shinness = 8
 
 local P = Vec.new(-1, 0, 0)
 local A = Vec.new(10, -1700, 1550)
-local B = Vec.new(60, 250, 500)
+local B = Vec.new(13, 250, 500)
 local C = Vec.new(10, 1200, 1000)
 
 local AB = B - A
@@ -79,21 +80,30 @@ for z = -256, 255 do
 end
 for r = 1, 512 do
   for c = 1, 512 do
-     local inside, Q = test_ray_triangle_intersection(P, directions[r + (c-1) * 512 ], A, N)
+     local d = directions[r + (c-1) * 512 ]
+     local inside, Q = test_ray_triangle_intersection(P, d, A, N)
      if inside then
-        local distance_to_light = #(Q-L)
         
+        local w_i = (Q - L)
+        local w_o = d:scale(-1)
+        
+        local w_h = (w_i + w_o):normalized()
+        
+        
+        local distance_to_light = #(w_i)
         local L_i = L_c / (4 * math.pi * distance_to_light^2) 
-        print("L_i:", L_i:r(), L_i:g(), L_i:b() )
+        print("L_i:", L_i:r(), L_i:g(), L_i:b())
         
-        local D =  (Q-L):normalized()
         
-        local L_o = L_i * lambert_bsdf * math.max(0, N:dot(D))
-        print("L_o:", L_o[1],L_o[2],L_o[3] )
+        print( "Dot:" , w_h:dot(N))
+        local blinn_phong_bsdf = math.max((w_h:dot(N)),0)^ shinness  * 1e21
+        
+        local L_o = L_i * blinn_phong_bsdf 
+        print("L_o:", L_o[1], L_o[2], L_o[3] )
         img:set(r, c, L_o)
      end
   end
 end
 
-img:save("triangle_lambert.ppm")
+img:save("triangle_blinn_phong.ppm")
 -- Main Code Block:1 ends here

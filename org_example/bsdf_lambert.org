@@ -133,7 +133,7 @@ The rendered result like:
 ** Compute Directions
 #+NAME: prepare_directions_pointer_to_pixels_in_near_plane
 #+BEGIN_SRC lua
-  directions = {}
+  local directions = {}
   for z = -256, 255 do
     for y = -256, 255 do
        table.insert(directions, Vec.new(1, y, z))

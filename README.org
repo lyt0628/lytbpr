@@ -3,8 +3,8 @@
 
 * Examples
 ** Ray-Triangle Intersection
-Document: [[./org_example/ray_triangle_intersection.org
-]]
+Document: [[./org_example/ray_triangle_intersection.org]]
+
 Result:
 
 [[./example/triangle.png]]
@@ -15,3 +15,11 @@ Document: [[./org_example/bsdf_lambert.org]]
 Result:
 
 [[./example/triangle_lambert.png]]
+
+
+** Blinn-Phong Triangle
+Document: [[./org_example/bsdf_blinn_phong.org]]
+
+Result:
+
+[[./example/triangle_blinn_phong.png]]

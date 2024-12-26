@@ -223,9 +223,7 @@ function M:identity()
        end
    end
    local result = M.from_elems(elems, dimension)
-   if not self.identity_ then
-      self.identity = result:clone()
-   end
+   self.identity_ = result:clone()
    return result
 end
 function M:cofactor(row, col)
@@ -248,9 +246,6 @@ function M:cofactor(row, col)
       result.vecs[i].elems = luautil.remove_hole(result.vecs[i].elems)
    end
 
-   if not self.cofactor then
-      self.cofactor_ = result:clone()
-   end
    return result
 end
 function M:algebraic_cofactor(row, col)
@@ -259,9 +254,6 @@ function M:algebraic_cofactor(row, col)
 
    result = result:with_row(1, r)
 
-   if not self.algebraic_cofactor_ then
-      self.algebraic_cofactor_ = result
-   end
    return result
 end
 function M:det()
@@ -282,9 +274,7 @@ function M:det()
       end
    end
 
-   if not self.det_ then
-      self.det_ = result
-   end
+   self.det_ = result
    return result
 end
 function M:reduced()
@@ -330,9 +320,7 @@ function M:reduced()
        ::continue::
    end
 
-   if not self.reduced_ then
-      self.reduced = mat 
-   end
+   self.reduced_ = mat 
    return mat
 end
 function M:simplified()
@@ -378,9 +366,7 @@ function M:simplified()
        ::continue::
    end
 
-   if self.simplified_ then
-      self.simplified_ = mat
-   end
+   self.simplified_ = mat
    return mat
 end
 function M:rank()
@@ -396,9 +382,7 @@ function M:rank()
    end
    ::END::
 
-   if self.rank_ then
-      self.rank_ = rank
-   end
+   self.rank_ = rank
    return rank
 end
 function M:inverse()
@@ -414,9 +398,7 @@ function M:inverse()
    local dimension = self:cols()
    local result = mat:slice(1, dimension + 1, dimension, 2*dimension)
 
-   if not self.inverse_ then
-      self.inverse_ = result
-   end
+   self.inverse_ = result
    return result
 end
 function M:ortho()
@@ -452,21 +434,8 @@ function M:ortho()
    result = luautil.reverse(result)
    result = Vec.new(table.unpack(result))
 
-   if not self.ortho_ then
-      self.ortho_ = result
-   end
+   self.ortho_ = result
    return result
-end
-function M:cache()
-   self:identity()
-   self:cofactor()
-   self:algebraic_cofactor()
-   self:det()
-   self:simplified()
-   self:reduced()
-   self:rank()
-   self:inverse()
-   self:ortho()
 end
 function M.__mul(lhv, rhv)
    if(lhv.classid == "Mat" and rhv.classid == "Mat") then

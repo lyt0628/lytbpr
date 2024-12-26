@@ -127,11 +127,7 @@ function M:len()
   end
   local result = math.sqrt(sum)
 
-
-   -- Cache result
-   if self.len_ ~= result then
-      self.len_ = result
-   end
+  self.len_ = result
   return result
 end
 function M:normalized()
@@ -142,9 +138,7 @@ function M:normalized()
   end
 
   result = M.new(table.unpack(result))
-  if not self.normalized then
-     self.normalized = result
-  end
+  self.normalized_ = result
 
   return result
 end
@@ -182,9 +176,17 @@ function M:concat(other)
    table.move(other.elems, 1, other:size(), self:size() + 1, elems)
    return M.new(table.unpack(elems))
 end 
-function M.cache()
-   self:len()
-   self:normalized()
+function M:has_nan()
+   local result = false
+   for i = 0, self:size() do
+      if math.type(self:get(i)) == "nan" then
+           result = true
+           break
+      end
+   end
+
+   self.has_nan_  = result
+   return result
 end
 function M.__index(t, key)
    local result
