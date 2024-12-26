@@ -120,20 +120,21 @@ function M:scale(scalar)
   end
   return M.new(table.unpack(result))
 end
-function M.len()
+function M:len()
   local sum = 0
   for i = 1, self:size() do
      sum = sum + self:get(i)^2
   end
   local result = math.sqrt(sum)
 
-  -- Cache result
-  if self.len ~= result then
-     self.len = result
-  end
-  return 
+
+   -- Cache result
+   if self.len_ ~= result then
+      self.len_ = result
+   end
+  return result
 end
-function M:normlized()
+function M:normalized()
   local result = {}
   local len = #self
   for i = 1, self:size() do
@@ -200,11 +201,7 @@ function M.__concat(lhv, rhv)
    return lhv:concat(rhv)
 end
 function M.__len(v)
-  local sum = 0
-  for i = 1, v:size() do
-     sum = sum + v[i]^2
-  end
-  return math.sqrt(sum)
+  return v.len_ or v:len() 
 end
 function M.__add(lhv, rhv)
   return lhv:add(rhv)

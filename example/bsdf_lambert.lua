@@ -6,14 +6,32 @@ local Vec = require("vec")
 local Mat = require("mat")
 local PPM = require("ppm")
 
-function test_ray_triangle_intersection(P, d, A, B, C)
-      local AB = B - A
-      local AC = C - A
-      local N = Vec.cross3(AB, AC)
-      local AB_o = Vec.cross3(N, AB)
-      local AC_o = Vec.cross3(N, AC)
-      local AB_o = AB_o / (AC:dot(AB_o))
-      local AC_o = AC_o / (AB:dot(AC_o))
+
+local img = PPM.new(512, 512)
+
+-- Light And Its Color
+local L = Vec.new(0, 0, 0)
+local L_c = Vec.new(255, 200, 100)
+
+-- A factor to modify light value
+local lambert_bsdf = Vec.new(36, 36, 36) * 3500000
+
+local P = Vec.new(-1, 0, 0)
+local A = Vec.new(10, -1700, 1550)
+local B = Vec.new(60, 250, 500)
+local C = Vec.new(10, 1200, 1000)
+
+local AB = B - A
+local AC = C - A
+local N = Vec.cross3(AB, AC):normalized()
+
+local AB_o = Vec.cross3(N, AB)
+AB_o = AB_o / (AC:dot(AB_o))
+local AC_o = Vec.cross3(N, AC)
+AC_o = AC_o / (AB:dot(AC_o))
+
+
+function test_ray_triangle_intersection(P, d, A, N)
       local u = N:dot(d)
       
       if(u == 0) then
@@ -49,23 +67,9 @@ function test_ray_triangle_intersection(P, d, A, B, C)
         print("Inside triangle,", a, b, c)
       
         -- Return a Extra Position of Intersection Point
-        return true, Q, N
+        return true, Q
       end
 end
-
-local img = PPM.new(512, 512)
-
--- Light And Its Color
-local L = Vec.new(0, 0, 0)
-local L_c = Vec.new(255, 200, 100)
-
--- A factor to modify light value
-local lambert_factor = Vec.new(36, 36, 36)
-
-local P = Vec.new(-1, 0, 0)
-local A = Vec.new(10, -1700, 1550)
-local B = Vec.new(60, 250, 500)
-local C = Vec.new(10, 1200, 1000)
 
 directions = {}
 for z = -256, 255 do
@@ -75,20 +79,18 @@ for z = -256, 255 do
 end
 for r = 1, 512 do
   for c = 1, 512 do
-     local inside, Q, N = test_ray_triangle_intersection(P, directions[r + (c-1)*512 ], A, B, C)
-     if (inside) then
-         local distance_to_light = #(Q-L)
-         print("Distance:" .. distance_to_light)
-         local L_i = L_c / ( distance_to_light^2) 
-         print("L_i:" .. L_i:r(),L_i:g(),L_i:b() )
-         N = N:normlized()
-        -- print("N: " .. N[1], N[2], N[3] ,#N)
-         local D =  (Q-L):normlized()
-        -- print("D: " .. D[1], D[2], D[3])
-        -- print("Dot:" .. N:dot(D))
-         local L_o = L_i * lambert_factor * math.max(0, N:dot(D)) * 300000
-         print("L_o:" .. L_o[1],L_o[2],L_o[3] )
-         img:set(r, c, L_o)
+     local inside, Q = test_ray_triangle_intersection(P, directions[r + (c-1) * 512 ], A, N)
+     if inside then
+        local distance_to_light = #(Q-L)
+        
+        local L_i = L_c / (4 * math.pi * distance_to_light^2) 
+        print("L_i:", L_i:r(), L_i:g(), L_i:b() )
+        
+        local D =  (Q-L):normalized()
+        
+        local L_o = L_i * lambert_bsdf * math.max(0, N:dot(D))
+        print("L_o:", L_o[1],L_o[2],L_o[3] )
+        img:set(r, c, L_o)
      end
   end
 end

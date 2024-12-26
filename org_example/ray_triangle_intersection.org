@@ -13,6 +13,7 @@
   local A = Vec.new(1, 0, 0)
   local B = Vec.new(0, 1, 0)
   local C = Vec.new(0, 0, 1)
+  
   <<FN:test_ray_trangle_intersection>>
 
   print(test_ray_triangle_intersection(P,d,A,B,C))
@@ -47,8 +48,8 @@
 ** Sure The Vertex With Wight Coordinate identity
 #+NAME: sure_the_vectex_with_wight_coordinate_identity
 #+BEGIN_SRC lua
-  local AB_o = AB_o / (AC:dot(AB_o))
-  local AC_o = AC_o / (AB:dot(AC_o))
+  AB_o = AB_o / (AC:dot(AB_o))
+  AC_o = AC_o / (AB:dot(AC_o))
 #+END_SRC
 
 ** Check If Direction Of Ray Oppsite to Plane
@@ -73,17 +74,15 @@
     print("Ray miss plane")
     return false
   end
-
-
 #+END_SRC
 ** Compute Wight Coordinate Of Projection Of Point
 #+NAME: compute_wight_coordinate_of_projection_of_point
 #+BEGIN_SRC lua 
-  Q = P + t * d
+  local Q = P + t * d
 
-  c = (Q - C):dot(AC_o)
-  b = (Q - B):dot(AB_o)
-  a = 1 - (b + c)
+  local c = (Q - C):dot(AC_o)
+  local b = (Q - B):dot(AB_o)
+  local a = 1 - (b + c)
 
   if a < 0 or a > 1 or b < 0 or b > 1 or c < 0 or c > 1 then
     print("Out of triangle,", a, b, c)
@@ -97,7 +96,6 @@
 
 
 * Draw Image With Ray-Triangle Intersection
-
 #+BEGIN_SRC lua :tangle ../example/ray_triangle_intersection_draw.lua
   package.path = package.path .. ";" .. "../src/util/?.lua"
   local Vec = require("vec")

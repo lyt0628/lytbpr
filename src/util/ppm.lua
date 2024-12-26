@@ -3,7 +3,7 @@
 
 -- [[file:../../org/util/ppm.org::*Module Definition][Module Definition:1]]
 local Vec = require("vec")
-PPM = {}
+local PPM = {}
 PPM.__index = PPM
 PPM.magic = 'P3'
 

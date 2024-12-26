@@ -26,8 +26,8 @@ Let us use Lua Module to define the Vec type.
 * PPM Definition
 Let ues define a class for using.
 #+NAME: PPM_definition
-#+begin_src lua :noweb-ref cg-type
-  PPM = {}
+#+begin_src lua 
+  local PPM = {}
   PPM.__index = PPM
   PPM.magic = 'P3'
 

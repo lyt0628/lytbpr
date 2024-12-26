@@ -86,7 +86,7 @@ multiply or divide self with other vector by , and return the result. The parame
 
 ** Members Of Vec
 :PROPERTIES: 
-:header-args: :name members_of_mat 
+:header-args: :noweb-ref members_of_mat 
 :END:
 
 *** from_vecs()
@@ -145,7 +145,7 @@ And range by cols to get elem and put it into a Vec.
 #+END_SRC
 
 #+NAME: from_elems:store_elems_row_by_row 
-#+BEGIN_SRC lua :noweb-ref 
+#+BEGIN_SRC lua :noweb-ref _
   local ncol = #(elems) / nrow;
   for r = 1, nrow do
     local row = {}
@@ -387,7 +387,7 @@ And range by cols to get elem and put it into a Vec.
 #+end_src
 
 #+NAME: identity:cache
-#+BEGIN_SRC lua 
+#+BEGIN_SRC lua :noweb-ref _
      if not self.identity_ then
         self.identity = result:clone()
      end
@@ -414,7 +414,7 @@ And range by cols to get elem and put it into a Vec.
 #+end_src
 
 #+NAME: cofactor:cache
-#+BEGIN_SRC lua 
+#+BEGIN_SRC lua :noweb-ref _
   if not self.cofactor then
      self.cofactor_ = result:clone()
   end
@@ -434,7 +434,7 @@ And range by cols to get elem and put it into a Vec.
 #+end_src
 
 #+NAME: algebraic_cofactor:cache
-#+BEGIN_SRC lua
+#+BEGIN_SRC lua :noweb-ref _
   if not self.algebraic_cofactor_ then
      self.algebraic_cofactor_ = result
   end
@@ -462,7 +462,7 @@ For other rank matrix, we expand recurly it by row, until 2-rank, or 1-rank.
 #+end_src
 
 #+NAME: det:cache
-#+BEGIN_SRC  lua
+#+BEGIN_SRC  lua :noweb-ref _
   if not self.det_ then
      self.det_ = result
   end
@@ -512,14 +512,14 @@ We awlay expand the first row
 #+end_src
 
 #+NAME: reduced:cache
-#+BEGIN_SRC lua
+#+BEGIN_SRC lua :noweb-ref _
   if not self.reduced_ then
      self.reduced = mat 
   end
 #+END_SRC
 
 #+NAME: sure_head_elem_not_zero
-#+begin_src lua 
+#+begin_src lua :noweb-ref _
   if mat[r][c] == 0 then
      local row = 0 -- Init with 0, that is not found
      for j = r + 1, mat:rows() do 
@@ -544,7 +544,7 @@ We awlay expand the first row
 #+end_src
 
 #+NAME: make_head_elem_identity
-#+begin_src lua 
+#+begin_src lua :noweb-ref _ 
   -- When Matrix is not full rank, maybe no head elem, mat[r][c] will be zero in last row
   if(mat[r][c] ~= 1 and mat[r][c] ~= 0) then
      mat = mat:scale_row(r, 1 / mat:get(r, c))
@@ -552,7 +552,7 @@ We awlay expand the first row
 #+end_src
 
 #+NAME: make_other_elems_in_the_col_zero
-#+begin_src lua 
+#+begin_src lua :noweb-ref _
   for j = 1, self:rows() do
     if(j ~= r and mat[j][c] ~=0) then
      local v = mat:row(r)
@@ -584,14 +584,14 @@ We awlay expand the first row
 #+end_src
 
 #+NAME: simplified:cache
-#+BEGIN_SRC lua 
+#+BEGIN_SRC lua :noweb-ref _
   if self.simplified_ then
      self.simplified_ = mat
   end
 #+END_SRC
 
 #+NAME: make_other_elems_under_head_elem_in_the_col_zero
-#+begin_src lua 
+#+begin_src lua :noweb-ref _
   for j = r + 1, self:rows() do
     if(mat[j][c] ~=0) then
      local v = mat:row(r)
@@ -622,7 +622,7 @@ We awlay expand the first row
 #+END_SRC
 
 #+NAME: rank:cache
-#+BEGIN_SRC lua
+#+BEGIN_SRC lua :noweb-ref _
     if self.rank_ then
        self.rank_ = rank
     end
@@ -646,7 +646,7 @@ We use Gauss-Jordan to compute inverse of matrix
 #+end_src
 
 #+NAME: inverse:cache
-#+BEGIN_SRC lua
+#+BEGIN_SRC lua :noweb-ref _
   if not self.inverse_ then
      self.inverse_ = result
   end
@@ -688,7 +688,7 @@ We use Gauss-Jordan to compute inverse of matrix
 #+END_SRC
 
 #+NAME: ortho:compute_symbol_value_in_head_elem
-#+BEGIN_SRC lua 
+#+BEGIN_SRC lua :noweb-ref _
         local hit_head = false
         for c = 1, mat:cols() do
             if(hit_head) then
@@ -701,7 +701,7 @@ We use Gauss-Jordan to compute inverse of matrix
 #+END_SRC
 
 #+NAME: ortho:cache
-#+BEGIN_SRC lua
+#+BEGIN_SRC lua :noweb-ref _
   if not self.ortho_ then
      self.ortho_ = result
   end

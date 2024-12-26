@@ -157,7 +157,6 @@ At least, Vec holds one element. so, src_<lua>{local c =Vec.new()} is invalid.
     function M:pq() return M.new(self:p(), self:q()) end
 #+end_src
 
-
 *** with()
 #+begin_src lua
   function M:with(idx, value)
@@ -239,24 +238,30 @@ Vector add is add elem by position.
 
 *** len()
 #+begin_src lua
-  function M.len()
+  function M:len()
     local sum = 0
     for i = 1, self:size() do
        sum = sum + self:get(i)^2
     end
     local result = math.sqrt(sum)
 
-    -- Cache result
-    if self.len ~= result then
-       self.len = result
-    end
-    return 
+
+     <<len:cache>>
+    return result
   end
 #+end_src
 
-*** normilzed()
+#+NAME: len:cache
+#+BEGIN_SRC lua :noweb-ref _
+  -- Cache result
+  if self.len_ ~= result then
+     self.len_ = result
+  end
+#+END_SRC
+
+*** normalized()
 #+BEGIN_SRC  lua
-  function M:normlized()
+  function M:normalized()
     local result = {}
     local len = #self
     for i = 1, self:size() do
@@ -382,11 +387,7 @@ otherwise, we get it from metatable, that is class in OOP.
 The length of vector is a sqrt of sum of all elements.
 #+begin_src lua
   function M.__len(v)
-    local sum = 0
-    for i = 1, v:size() do
-       sum = sum + v[i]^2
-    end
-    return math.sqrt(sum)
+    return v.len_ or v:len() 
   end
 #+end_src
 
@@ -428,7 +429,6 @@ Vec / Vec
 :PROPERTIES: 
 :header-args: :noweb-ref _ 
 :END:
-
 
 **** __mul
 Multiply operation is more complex than others, cause Multiply operation not only can be applied between vectors, but between vector and number
