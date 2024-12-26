@@ -5,9 +5,12 @@
 ** Ray-Triangle Intersection
 Document: [[./org_example/ray_triangle_intersection.org]]
 Result:
-[[./example/triangle.ppm]]
+
+[[./example/triangle.png]]
 
 ** Lambert Triangle
 Document: [[./org_example/bsdf_lambert.org]]
+
 Result:
-[[./example/triangle_lambert.ppm]]
+
+[[./example/triangle_lambert.png]]
