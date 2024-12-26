@@ -1,1 +1,13 @@
 
+
+
+* Examples
+** Ray-Triangle Intersection
+Document: [[./org_example/ray_triangle_intersection.org]]
+Result:
+[[./example/triangle.ppm]]
+
+** Lambert Triangle
+Document: [[./org_example/bsdf_lambert.org]]
+Result:
+[[./example/triangle_lambert.ppm]]

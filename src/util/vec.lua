@@ -10,8 +10,12 @@ function M.new(...)
    end
    local elems = {...}
    local v= {elems = elems}
+   v.cache = {} -- Used for cache
    setmetatable(v, M)
    return v
+end
+function M:size()
+  return #(self.elems)
 end
 function M:get(idx)
   if not idx then
@@ -22,6 +26,33 @@ function M:get(idx)
   end
   return self.elems[idx]
 end
+-- Used for location
+function M:x() return self[1] end
+function M:y() return self[2] end
+function M:z() return self[3] end
+function M:w() return self[4] end
+
+
+function M:xy() return M.new(self:x(), self:y()) end
+function M:yz() return M.new(self:y(), self:z()) end
+function M:zw() return M.new(self:z(), self:w()) end
+
+function M:xyz() return M.new(self:x(), self:y(), self:z()) end
+-- Used for color
+function M:r() return self[1] end
+function M:g() return self[2] end
+function M:b() return self[3] end
+function M:a() return self[4] end
+
+function M:rgb() return Vec.new(self:r(), self:g(), self:b()) end
+-- Used for texture
+function M:s() return self[1] end
+function M:t() return self[2] end
+function M:p() return self[3] end
+function M:q() return self[4] end
+
+function M:st() return M.new(self:s(), self:t()) end
+function M:pq() return M.new(self:p(), self:q()) end
 function M:with(idx, value)
   if not idx then
      error("[Vec:get] index of element is required as paramter!")
@@ -34,9 +65,6 @@ function M:with(idx, value)
   result.elems[idx] = value
 
   return result
-end
-function M:size()
-  return #(self.elems)
 end
 function M:add(other)
   if(self:size() ~= other:size()) then
@@ -92,13 +120,32 @@ function M:scale(scalar)
   end
   return M.new(table.unpack(result))
 end
+function M.len()
+  local sum = 0
+  for i = 1, self:size() do
+     sum = sum + self:get(i)^2
+  end
+  local result = math.sqrt(sum)
+
+  -- Cache result
+  if self.len ~= result then
+     self.len = result
+  end
+  return 
+end
 function M:normlized()
   local result = {}
   local len = #self
   for i = 1, self:size() do
      result[i]= self.elems[i] / len
   end
-  return M.new(table.unpack(result))
+
+  result = M.new(table.unpack(result))
+  if not self.normalized then
+     self.normalized = result
+  end
+
+  return result
 end
  function M:dot(other)
   if(self:size() ~= other:size()) then
@@ -110,6 +157,13 @@ end
      sum = sum + self[i] * other[i]
   end
   return sum
+end   
+ function M.cross3(one, other)
+  local x = one:y() * other:z() - one:z() * other:y()
+  local y = one:z() * other:x() - one:x() * other:z()
+  local z = one:x() * other:y() - one:y() * other:x()
+
+  return M.new(x, y, z)
 end   
 function M:clone()
    local result = {}
@@ -127,40 +181,10 @@ function M:concat(other)
    table.move(other.elems, 1, other:size(), self:size() + 1, elems)
    return M.new(table.unpack(elems))
 end 
--- Used for location
-function M:x() return self[1] end
-function M:y() return self[2] end
-function M:z() return self[3] end
-function M:w() return self[4] end
-
-
-function M:xy() return M.new(self:x(), self:y()) end
-function M:yz() return M.new(self:y(), self:z()) end
-function M:zw() return M.new(self:z(), self:w()) end
-
-function M:xyz() return M.new(self:x(), self:y(), self:z()) end
--- Used for color
-function M:r() return self[1] end
-function M:g() return self[2] end
-function M:b() return self[3] end
-function M:a() return self[4] end
-
-function M:rgb() return Vec.new(self:r(), self:g(), self:b()) end
--- Used for texture
-function M:s() return self[1] end
-function M:t() return self[2] end
-function M:p() return self[3] end
-function M:q() return self[4] end
-
-function M:st() return M.new(self:s(), self:t()) end
-function M:pq() return M.new(self:p(), self:q()) end
- function M.cross3(one, other)
-  local x = one:y() * other:z() - one:z() * other:y()
-  local y = one:z() * other:x() - one:x() * other:z()
-  local z = one:x() * other:y() - one:y() * other:x()
-
-  return M.new(x, y, z)
-end   
+function M.cache()
+   self:len()
+   self:normalized()
+end
 function M.__index(t, key)
    local result
    if type(key) == "number" then

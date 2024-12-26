@@ -14,7 +14,7 @@
                                             (:exports . "code")
                                             (:eval . "no")
                                             (:cache . "no")
-                                            (:noweb . "yes")
+                                            (:noweb . "strip-export")
                                             (:comments . "both")
                                             (:hlines . "no")
                                             (:tangle . "no"))))))

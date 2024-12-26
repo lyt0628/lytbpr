@@ -1,5 +1,5 @@
 
-* Api Document
+* Document
 ** Mat(Matrix) Abstract
 #+BEGIN_SRC plantuml :eval yes :result file :file ./asset/class_mat.png 
   @startuml
@@ -86,20 +86,29 @@ multiply or divide self with other vector by , and return the result. The parame
 
 ** Members Of Vec
 :PROPERTIES: 
-:header-args: :noweb-ref members_of_mat 
+:header-args: :name members_of_mat 
 :END:
+
+*** from_vecs()
+If col vectors were prepared by client, just store it.
+#+begin_src lua
+  function M.from_vecs(vecs)
+     <<!from_vecs:vecs_must_hold_same_amount_of_elems>>
+    local mat = {vecs = vecs}
+    setmetatable(mat, M)
+    return mat
+  end
+#+end_src
 
 *** new()
 We use [[id:d924a8ba-5060-44f6-8023-b4cae6ae7d5f][cg-vector]] to store elements by column, but the param rows is a table that store subtable with elements by row.
 So, we should convert that to col vector and store the result.
-#+BEGIN_SRC lua :comments both 
+#+BEGIN_SRC lua 
   function M.new(rows) 
      <<!new:size_of_rows_should_be_same>>
      local vecs = {}
      <<new:convert_rows_to_col_vec>>
-     local mat = {vecs = vecs}
-     setmetatable(mat, M)
-     return mat
+     return M.from_vecs(vecs)
   end
 #+END_SRC
 
@@ -122,17 +131,6 @@ And range by cols to get elem and put it into a Vec.
       col[r] = rows[r][c]
     end
     vecs[c] = Vec.new(table.unpack(col))
-  end
-#+end_src
-
-*** from_vecs()
-If col vectors were prepared by client, just store it.
-#+begin_src lua
-  function M.from_vecs(vecs)
-     <<!from_vecs:vecs_must_hold_same_amount_of_elems>>
-    local mat = {vecs = vecs}
-    setmetatable(mat, M)
-    return mat
   end
 #+end_src
 
@@ -308,7 +306,7 @@ If col vectors were prepared by client, just store it.
   end
 #+end_src
 
-**transform()
+*** transform()
 #+begin_src lua
   function M:mul_with_vec(vec)
      local mat = Mat.from_vecs({vec})
@@ -382,9 +380,18 @@ If col vectors were prepared by client, just store it.
              elems[c + (r-1)*dimension] = ((r == c) and 1) or 0
          end
      end
-     return Mat.from_elems(elems, dimension)
+     local result = M.from_elems(elems, dimension)
+     <<identity:cache>>
+     return result
   end
 #+end_src
+
+#+NAME: identity:cache
+#+BEGIN_SRC lua 
+     if not self.identity_ then
+        self.identity = result:clone()
+     end
+#+END_SRC
 
 *** cofactor()
 #+begin_src lua
@@ -400,23 +407,43 @@ If col vectors were prepared by client, just store it.
         result.vecs[i].elems[row] = nil
         result.vecs[i].elems = luautil.remove_hole(result.vecs[i].elems)
      end
+
+     <<cofactor:cache>>
      return result
   end
 #+end_src
+
+#+NAME: cofactor:cache
+#+BEGIN_SRC lua 
+  if not self.cofactor then
+     self.cofactor_ = result:clone()
+  end
+#+END_SRC
+
 *** algebraic_cofactor()
 #+begin_src lua
   function M:algebraic_cofactor(row, col)
      local result = self:cofactor(row,col)
      local r = result:row(1) * math.pow(-1, row + col)
-     return result:with_row(1, r)
+
+     result = result:with_row(1, r)
+
+     <<algebraic_cofactor:cache>>
+     return result
   end
 #+end_src
+
+#+NAME: algebraic_cofactor:cache
+#+BEGIN_SRC lua
+  if not self.algebraic_cofactor_ then
+     self.algebraic_cofactor_ = result
+  end
+#+END_SRC
 
 *** det()
 For a 1-rank Matrix the element is its determinant,
 For 2-rnak Matrix, we use Formula to compute,
 For other rank matrix, we expand recurly it by row, until 2-rank, or 1-rank.
-#+NAME: Mat:determinant
 #+begin_src lua
   function M:det()
      <<only_meaningful_for_square_matrix>>
@@ -428,9 +455,18 @@ For other rank matrix, we expand recurly it by row, until 2-rank, or 1-rank.
      else
         <<expand_matrix_by_row_to_compute_determinant>>
      end
+
+     <<det:cache>>
      return result
   end
 #+end_src
+
+#+NAME: det:cache
+#+BEGIN_SRC  lua
+  if not self.det_ then
+     self.det_ = result
+  end
+#+END_SRC
 
 **** For 1-rank Matrix
 #+NAME: determinant_for_1rank_matrix
@@ -469,12 +505,21 @@ We awlay expand the first row
          r = r + 1 -- Increase current row to put head elem
          ::continue::
      end
+
+     <<reduced:cache>>
      return mat
   end
 #+end_src
 
+#+NAME: reduced:cache
+#+BEGIN_SRC lua
+  if not self.reduced_ then
+     self.reduced = mat 
+  end
+#+END_SRC
+
 #+NAME: sure_head_elem_not_zero
-#+begin_src lua :noweb-ref _
+#+begin_src lua 
   if mat[r][c] == 0 then
      local row = 0 -- Init with 0, that is not found
      for j = r + 1, mat:rows() do 
@@ -499,7 +544,7 @@ We awlay expand the first row
 #+end_src
 
 #+NAME: make_head_elem_identity
-#+begin_src lua :noweb-ref _
+#+begin_src lua 
   -- When Matrix is not full rank, maybe no head elem, mat[r][c] will be zero in last row
   if(mat[r][c] ~= 1 and mat[r][c] ~= 0) then
      mat = mat:scale_row(r, 1 / mat:get(r, c))
@@ -507,7 +552,7 @@ We awlay expand the first row
 #+end_src
 
 #+NAME: make_other_elems_in_the_col_zero
-#+begin_src lua :noweb-ref _
+#+begin_src lua 
   for j = 1, self:rows() do
     if(j ~= r and mat[j][c] ~=0) then
      local v = mat:row(r)
@@ -531,20 +576,22 @@ We awlay expand the first row
 
          r = r + 1 -- Increase current row to put head elem
          ::continue::
-  --[[
-    print(mat[1][1],mat[1][2], mat[1][3])
-    print(mat[2][1],mat[2][2], mat[2][3])
-    print(mat[3][1],mat[3][2], mat[3][3])
-    print("---------------------------")
-  --]]
-  
      end
+
+     <<simplified:cache>>
      return mat
   end
 #+end_src
 
+#+NAME: simplified:cache
+#+BEGIN_SRC lua 
+  if self.simplified_ then
+     self.simplified_ = mat
+  end
+#+END_SRC
+
 #+NAME: make_other_elems_under_head_elem_in_the_col_zero
-#+begin_src lua :noweb-ref _
+#+begin_src lua 
   for j = r + 1, self:rows() do
     if(mat[j][c] ~=0) then
      local v = mat:row(r)
@@ -568,8 +615,17 @@ We awlay expand the first row
         rank = rank - 1
      end
      ::END::
+
+     <<rank:cache>>
      return rank
   end
+#+END_SRC
+
+#+NAME: rank:cache
+#+BEGIN_SRC lua
+    if self.rank_ then
+       self.rank_ = rank
+    end
 #+END_SRC
 
 *** inverse()
@@ -582,9 +638,19 @@ We use Gauss-Jordan to compute inverse of matrix
      mat = mat:simplified()
 
      local dimension = self:cols()
-     return mat:slice(1, dimension + 1, dimension, 2*dimension)
+     local result = mat:slice(1, dimension + 1, dimension, 2*dimension)
+
+     <<inverse:cache>>
+     return result
   end
 #+end_src
+
+#+NAME: inverse:cache
+#+BEGIN_SRC lua
+  if not self.inverse_ then
+     self.inverse_ = result
+  end
+#+END_SRC
 
 *** ortho()
 #+begin_src lua
@@ -594,7 +660,9 @@ We use Gauss-Jordan to compute inverse of matrix
      mat = mat:simplified()
      local result = {}
 
+     local rank = self:rank()
      <<ortho:fix_freedom>>
+
      for r = rank, 1, -1 do
         local value = 0
         <<ortho:compute_symbol_value_in_head_elem>>
@@ -602,14 +670,16 @@ We use Gauss-Jordan to compute inverse of matrix
      end 
 
      result = luautil.reverse(result)
-     return Vec.new(table.unpack(result))
+     result = Vec.new(table.unpack(result))
+
+     <<ortho:cache>>
+     return result
   end
 #+end_src
 
 #+NAME: ortho:fix_freedom
 #+BEGIN_SRC  lua :noweb-ref _
-  local rank = self:rank()
-  <<ortho:full_rank_matrix_cannot_find_ortho>>
+  <<!ortho:full_rank_matrix_cannot_find_ortho>>
   local freedom = self:cols() - rank + (self:rows() - self:cols()) -- Reserve for extra freedom for over-space
   while freedom > 0 do
      table.insert(result, 1)
@@ -618,7 +688,7 @@ We use Gauss-Jordan to compute inverse of matrix
 #+END_SRC
 
 #+NAME: ortho:compute_symbol_value_in_head_elem
-#+BEGIN_SRC lua :noweb-ref _
+#+BEGIN_SRC lua 
         local hit_head = false
         for c = 1, mat:cols() do
             if(hit_head) then
@@ -628,6 +698,28 @@ We use Gauss-Jordan to compute inverse of matrix
                hit_head = true
             end
         end
+#+END_SRC
+
+#+NAME: ortho:cache
+#+BEGIN_SRC lua
+  if not self.ortho_ then
+     self.ortho_ = result
+  end
+#+END_SRC
+
+*** cache()
+#+BEGIN_SRC lua
+  function M:cache()
+     self:identity()
+     self:cofactor()
+     self:algebraic_cofactor()
+     self:det()
+     self:simplified()
+     self:reduced()
+     self:rank()
+     self:inverse()
+     self:ortho()
+  end
 #+END_SRC
 
 *** Operators
@@ -836,6 +928,15 @@ If a Erro check dependents on the local state, We should prepare a individual sn
 
 
 
+** ortho
+#+NAME: !ortho:full_rank_matrix_cannot_find_ortho
+#+BEGIN_SRC lua 
+  if (rank == mat:cols()) then
+     error("[Mat#ortho()] Full rank matrix cannot find ortho")
+  end
+#+END_SRC
+
+
 ** add/sub:The_Shape_Of_Mat_Must_Be_Same
 #+NAME: add/sub:The_Shape_Of_Mat_Must_Be_Same
 #+begin_src lua
@@ -891,10 +992,3 @@ If a Erro check dependents on the local state, We should prepare a individual sn
   end
 #+end_src
 
-** ortho:full_rank_matrix_cannot_find_ortho
-#+NAME: ortho:full_rank_matrix_cannot_find_ortho
-#+BEGIN_SRC lua 
-  if (rank == mat:cols()) then
-     error("[Mat#ortho()] Full rank matrix cannot find ortho")
-  end
-#+END_SRC
