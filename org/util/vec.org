@@ -75,6 +75,8 @@ vector.
 * Code
 ** Module
 #+BEGIN_SRC lua :tangle ../../src/util/vec.lua
+  local luautil = require("luautil")
+  local fp = require("fp")
   <<M>>
   return M
 #+END_SRC
@@ -102,6 +104,8 @@ new() Method is a *static factory method* to create new Vec instance, which is s
      local v= {elems = elems}
      v.cache = {} -- Used for cache
      setmetatable(v, M)
+
+     assert(v:valid())
      return v
   end
 #+end_src
@@ -166,6 +170,7 @@ At least, Vec holds one element. so, src_<lua>{local c =Vec.new()} is invalid.
     local result = self:clone()
     result.elems[idx] = value
 
+    assert(resullt:valid())
     return result
   end
 #+end_src
@@ -221,7 +226,9 @@ Vector add is add elem by position.
       result[i] = self[i] / other[i] 
     end
 
-    return M.new(table.unpack(result))
+    result = M.new(table.unpack(result)) 
+    assert(result:valid())
+    return result
   end
 #+END_SRC
 
@@ -316,22 +323,26 @@ Vector add is add elem by position.
   end 
 #+END_SRC
 
-*** has_nan()
+*** maxcomp()
+#+BEGIN_SRC lua
+  function M:maxcomp()
+     return fp.max(self.elems, function(a, b) return a > b end)
+  end
+#+END_SRC
+
+*** mincomp()
+#+BEGIN_SRC lua
+  function M:mincomp()
+     return fp.max(self.elems, function(a, b) return a < b end)
+  end
+#+END_SRC
+
+*** valid()
 #+begin_src lua
-    function M:has_nan()
-       local result = false
-       for i = 0, self:size() do
-          if math.type(self:get(i)) == "nan" then
-               result = true
-               break
-          end
-       end
-
-       self.has_nan_  = result
-       return result
-    end
+  function M:valid()
+     return fp.all(self.elems, luautil.is_num)
+  end
 #+end_src
-
 
 *** Operator Overload
 **** __index

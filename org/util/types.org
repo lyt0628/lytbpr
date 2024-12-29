@@ -1,0 +1,21 @@
+* Code
+** Module
+#+BEGIN_SRC lua :tangle ../../src/util/types.lua
+  local M = {}
+  <<M>>
+  return M
+#+END_SRC
+
+** Ray Definition
+:PROPERTIES: 
+:header-args: :noweb-ref M
+:END:
+
+*** Alias Of Vec
+
+#+BEGIN_SRC lua
+  local Vec = require("vec")
+  M.Point = Vec
+  M.Color = Vec
+  M.Radiance = Vec
+#+END_SRC

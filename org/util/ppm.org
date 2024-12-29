@@ -92,6 +92,10 @@ Let ues define a class for using.
     g = ((g > self.max_value) and 255) or g
     b = ((b > self.max_value) and 255) or b
 
+    r = ((r < 0) and 0) or r
+    g = ((g < 0) and 0) or g
+    b = ((b < 0) and 0) or b
+
     f:write( r .. " " .. g .. " " .. b  .. '\n')
   end
 #+end_src
@@ -114,8 +118,9 @@ set() for accessing a pixel
   end
 #+end_src
 
-
 #+NAME: out_of_bound
 #+begin_src lua
   if row > self.height or col > self.width then error("Out of bounds of PPM image. ") end
 #+end_src
+
+

@@ -1,6 +1,8 @@
 -- Module
 
 -- [[file:../../org/util/vec.org::*Module][Module:1]]
+local luautil = require("luautil")
+local fp = require("fp")
 local M = {}
 M.classid = "Vec"
 
@@ -12,6 +14,8 @@ function M.new(...)
    local v= {elems = elems}
    v.cache = {} -- Used for cache
    setmetatable(v, M)
+
+   assert(v:valid())
    return v
 end
 function M:size()
@@ -64,6 +68,7 @@ function M:with(idx, value)
   local result = self:clone()
   result.elems[idx] = value
 
+  assert(resullt:valid())
   return result
 end
 function M:add(other)
@@ -111,7 +116,9 @@ function M:div(other)
     result[i] = self[i] / other[i] 
   end
 
-  return M.new(table.unpack(result))
+  result = M.new(table.unpack(result)) 
+  assert(result:valid())
+  return result
 end
 function M:scale(scalar)
   local result = {}
@@ -176,17 +183,11 @@ function M:concat(other)
    table.move(other.elems, 1, other:size(), self:size() + 1, elems)
    return M.new(table.unpack(elems))
 end 
-function M:has_nan()
-   local result = false
-   for i = 0, self:size() do
-      if math.type(self:get(i)) == "nan" then
-           result = true
-           break
-      end
-   end
-
-   self.has_nan_  = result
-   return result
+function M:maxcomp()
+   return fp.max(self.elems, function(a, b) return a > b end)
+end
+function M:valid()
+   return fp.all(self.elems, luautil.is_num)
 end
 function M.__index(t, key)
    local result

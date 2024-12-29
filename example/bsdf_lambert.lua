@@ -5,21 +5,30 @@ package.path = package.path .. ";" .. "../src/util/?.lua"
 local Vec = require("vec")
 local Mat = require("mat")
 local PPM = require("ppm")
+local Ray = require("ray")
+function to_pixel(value_in_cm)
+   return 26 * value_in_cm
+end
 
-
-local img = PPM.new(512, 512)
-
+local A = Vec.new(to_pixel(1.7641), to_pixel(-147.445), to_pixel(-225.5))
+local B = Vec.new(to_pixel(0.21684), to_pixel(-89.257), to_pixel(129.431))
+local C = Vec.new(to_pixel(0.71684), to_pixel(248.68), to_pixel(80.808))
+local P = Vec.new(to_pixel(-1), 0, 0)
+local viewport = PPM.new(512, 512)
+local directions = {}
+for z = -256, 255 do
+  for y = -256, 255 do
+     table.insert(directions, Vec.new(1, y, z))
+  end
+end
 -- Light And Its Color
-local L = Vec.new(0, 0, 0)
-local L_c = Vec.new(255, 200, 100)
+local L = Vec.new(to_pixel(-100), to_pixel(100), 0)
+local L_c = Vec.new(55, 200, 0)
 
--- A factor to modify light value
-local lambert_bsdf = Vec.new(36, 36, 36) * 3500000
+print("L_c is: ", L_c:to_str())
 
-local P = Vec.new(-1, 0, 0)
-local A = Vec.new(10, -1700, 1550)
-local B = Vec.new(60, 250, 500)
-local C = Vec.new(10, 1200, 1000)
+
+local L_env = Vec.new(20, 20, 20) 
 
 local AB = B - A
 local AC = C - A
@@ -30,6 +39,10 @@ AB_o = AB_o / (AC:dot(AB_o))
 local AC_o = Vec.cross3(N, AC)
 AC_o = AC_o / (AB:dot(AC_o))
 
+print("Normal Of Triangle: ", N:to_str())
+print("Axis AB_o of Wight Coordinate: ", AB_o:to_str())
+print("Axis AC_o of Wight Coordinate: ", AC_o:to_str())
+print("+++++++++++++++++++++++++++++++++++++++++++++++++++++++")
 
 function test_ray_triangle_intersection(P, d, A, N)
       local u = N:dot(d)
@@ -70,30 +83,43 @@ function test_ray_triangle_intersection(P, d, A, N)
         return true, Q
       end
 end
-
-local directions = {}
-for z = -256, 255 do
-  for y = -256, 255 do
-     table.insert(directions, Vec.new(1, y, z))
-  end
+function BSDF(L_i, L_o, surfaceInfo)
+  local attenuation
+  attenuation = Vec.new(5, 50, 5) * 1e7
+  return attenuation
 end
 for r = 1, 512 do
   for c = 1, 512 do
      local inside, Q = test_ray_triangle_intersection(P, directions[r + (c-1) * 512 ], A, N)
      if inside then
-        local distance_to_light = #(Q-L)
-        
-        local L_i = L_c / (4 * math.pi * distance_to_light^2) 
-        print("L_i:", L_i:r(), L_i:g(), L_i:b() )
-        
-        local D =  (Q-L):normalized()
-        
-        local L_o = L_i * lambert_bsdf * math.max(0, N:dot(D))
-        print("L_o:", L_o[1],L_o[2],L_o[3] )
-        img:set(r, c, L_o)
+         local incident_vector = Q - L
+         local distance_to_light = #(incident_vector)
+         local incident_direction = incident_vector:normalized()
+         local reflected_direction = (P - Q):normalized()
+
+
+         local distance_attenuation = 1 / (4 * math.pi * distance_to_light^2)
+         print("Distance Attenuation: ", distance_attenuation)
+         local l = L_c * distance_attenuation  -- Distance Attenuation
+         print("L_c with Distance Attenuation: ", l:to_str())
+
+         local tilt_attenuation = N:dot(incident_direction:scale(-1))
+         print("Tilt Attenuation Without Campled: ", tilt_attenuation)
+         l = l * math.max(0, tilt_attenuation) -- Titel Attenuation
+         print("L_c with Tilt Attenuation: ", L_c:to_str())
+
+
+         local surfaceInfo = {}
+         surfaceInfo.normal = N
+         local bsdf_attenuation = BSDF(incident_direction, reflected_direction, surfaceInfo)
+         print("BSDF Attenuation: ", bsdf_attenuation:to_str())
+
+         local pixel = l * bsdf_attenuation  + L_env
+         print("Final Color: ", pixel:to_str())
+         print("+++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+         viewport:set(r,c, pixel)
      end
   end
 end
-
-img:save("triangle_lambert.ppm")
+viewport:save("triangle_lambert.ppm")
 -- Main Code Block:1 ends here

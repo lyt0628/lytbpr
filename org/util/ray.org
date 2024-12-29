@@ -1,0 +1,40 @@
+* Code
+** Module
+#+BEGIN_SRC lua :tangle ../../src/util/ray.lua
+  local luautil = require("luautil")
+  local fp = require("fp")
+  <<M>>
+  return M
+#+END_SRC
+
+** Ray Definition
+:PROPERTIES: 
+:header-args: :noweb-ref M
+:END:
+
+#+BEGIN_SRC lua 
+  local M = {}
+  M.classid = "Vec"
+#+END_SRC
+
+*** new()
+#+begin_src lua 
+  function M.new(origin, direction)
+  
+     local ray = {
+        origin = origin,
+        direction = direction
+     }
+
+     setmetatable(ray, M)
+
+     return ray
+  end
+#+end_src
+
+*** __call
+#+begin_src lua 
+  function M.__call(self, t) 
+     return self.origin + t * self.direction
+  end
+#+end_src

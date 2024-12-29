@@ -42,6 +42,10 @@ function PPM:save(path)
       g = ((g > self.max_value) and 255) or g
       b = ((b > self.max_value) and 255) or b
     
+      r = ((r < 0) and 0) or r
+      g = ((g < 0) and 0) or g
+      b = ((b < 0) and 0) or b
+    
       f:write( r .. " " .. g .. " " .. b  .. '\n')
     end
   f:close()

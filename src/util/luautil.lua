@@ -1,7 +1,7 @@
 -- Module
 
 -- [[file:../../org/util/luautil.org::*Module][Module:1]]
-M = {}
+local M = {}
 function M.reverse(tab)
    local result = {}
    for i = #tab, 1, -1 do
@@ -20,6 +20,11 @@ function M.remove_hole(tab)
    end
    return result
 end
-
+function M.is_number(value)
+   return type(value) == "number"
+end
+function M.is_num(value)
+   return M.is_number(value) and math.abs(value) == math.abs(- value)
+end
 return M
 -- Module:1 ends here

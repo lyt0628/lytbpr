@@ -4,21 +4,15 @@
 * Code
 ** Module
 #+BEGIN_SRC lua :tangle ../../src/util/luautil.lua 
+  local M = {}
   <<M>>
   return M
 #+END_SRC
 
-** luautil Definition
 
-#+NAME: M
-#+begin_src lua
-  local M = {}
-  <<members_of_luautil>>
-#+end_src
-
-** Members Of luautil
+** M
 :PROPERTIES:
-:header-args: :noweb-ref members_of_luautil
+:header-args: :noweb-ref M
 :END:
 
 *** reverse()
@@ -46,5 +40,21 @@
      end
      return result
   end
+#+END_SRC
 
+
+*** is_number()
+#+BEGIN_SRC lua
+  function M.is_number(value)
+     return type(value) == "number"
+  end
+#+END_SRC
+
+
+
+*** is_num()
+#+BEGIN_SRC lua
+  function M.is_num(value)
+     return M.is_number(value) and math.abs(value) == math.abs(- value)
+  end
 #+END_SRC
