@@ -1,7 +1,7 @@
 -- Main Code Block
 
--- [[file:../org_example/bsdf_blinn_phong.org::*Main Code Block][Main Code Block:1]]
-package.path = package.path .. ";" .. "../src/util/?.lua"
+-- [[file:org/bsdf_blinn_phong.org::*Main Code Block][Main Code Block:1]]
+require("conf_path")
 local Vec = require("vec")
 local Mat = require("mat")
 local PPM = require("ppm")

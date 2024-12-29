@@ -1,0 +1,147 @@
+#+LATEX_HEADER \usepackage{amsmath}
+
+
+#+BEGIN_SRC lua :tangle ../ray_triangle_intersection.lua
+  require("conf_path")
+  local Vec = require("vec")
+  local Mat = require("Mat")
+
+
+  local P = Vec.new(0, 0, 0)
+  local d = Vec.new(1, 1, 1):normlized()
+
+  local A = Vec.new(1, 0, 0)
+  local B = Vec.new(0, 1, 0)
+  local C = Vec.new(0, 0, 1)
+
+  <<FN:test_ray_trangle_intersection>>
+
+  print(test_ray_triangle_intersection(P,d,A,B,C))
+#+END_SRC
+
+* FN:test_ray_trangle_intersection
+#+NAME: FN:test_ray_trangle_intersection
+#+BEGIN_SRC lua
+  function test_ray_triangle_intersection(P, d, A, B, C)
+        <<compute_normal_of_trangle_plane>>
+        <<compute_axis_of_wight_coordinate>>
+        <<sure_the_vectex_with_wight_coordinate_identity>>
+        <<check_if_direction_of_ray_oppsite_to_plane>>
+        <<compute_wight_coordinate_of_projection_of_point>>
+  end
+#+END_SRC
+
+** Compute Normal of Trangle Plane
+#+NAME: compute_normal_of_trangle_plane
+#+BEGIN_SRC lua
+  local AB = B - A
+  local AC = C - A
+  local N = Vec.cross3(AB, AC)
+#+END_SRC
+
+** Compute Axis of Wight Coordinate
+#+NAME: compute_axis_of_wight_coordinate
+#+BEGIN_SRC lua
+  local AB_o = Vec.cross3(N, AB)
+  local AC_o = Vec.cross3(N, AC)
+#+END_SRC
+** Sure The Vertex With Wight Coordinate identity
+#+NAME: sure_the_vectex_with_wight_coordinate_identity
+#+BEGIN_SRC lua
+  AB_o = AB_o / (AC:dot(AB_o))
+  AC_o = AC_o / (AB:dot(AC_o))
+#+END_SRC
+
+** Check If Direction Of Ray Oppsite to Plane
+#+NAME: check_if_direction_of_ray_oppsite_to_plane
+#+BEGIN_SRC lua
+  local u = N:dot(d)
+
+  if(u == 0) then
+    print("Ray parall with Plane")
+    return false
+  end
+
+  if math.abs(u) < 1e-15 then
+    print("Unstable")
+    return false
+  end
+
+
+  t = ((A-P):dot(N))/u
+
+  if t < 0 then
+    print("Ray miss plane")
+    return false
+  end
+#+END_SRC
+** Compute Wight Coordinate Of Projection Of Point
+#+NAME: compute_wight_coordinate_of_projection_of_point
+#+BEGIN_SRC lua 
+  local Q = P + t * d
+
+  local c = (Q - C):dot(AC_o)
+  local b = (Q - B):dot(AB_o)
+  local a = 1 - (b + c)
+
+  if a < 0 or a > 1 or b < 0 or b > 1 or c < 0 or c > 1 then
+    print("Out of triangle,", a, b, c)
+    return false
+
+  else
+    print("Inside triangle,", a, b, c)
+    return true
+  end
+#+END_SRC
+
+
+* Draw Image With Ray-Triangle Intersection
+#+BEGIN_SRC lua :tangle ../ray_triangle_intersection_draw.lua
+  package.path = package.path .. ";" .. "../src/util/?.lua"
+  local Vec = require("vec")
+  local Mat = require("mat")
+  local PPM = require("ppm")
+
+  <<FN:test_ray_trangle_intersection>>
+
+  local img = PPM.new(64, 64)
+
+  local P = Vec.new(-1, 0, 0)
+  local A = Vec.new(1, -32, 31)
+  local B = Vec.new(6, 1, 5)
+  local C = Vec.new(1, 24, 20)
+
+  directions = {}
+  <<prepare_directions_pointer_to_pixels_in_near_plane>>
+  <<render_img_with_color_if_ray_hit_triangle>>
+
+  img:save("triangle.ppm")
+#+END_SRC
+We put camera at origon, The Triangle at ABC, and Near Plane at x = 1. with center of image at axis.
+So we can define direction from origion to the near plane each point. We use coordinate like Unity,
+x-z is the horizontal plane, and y is up axis. We use pixel as unit.
+
+#+NAME: prepare_directions_pointer_to_pixels_in_near_plane
+#+BEGIN_SRC lua
+  for z = -32, 31 do
+    for y = -32, 31 do
+       table.insert(directions, Vec.new(1, y, z))
+    end
+  end
+#+END_SRC
+
+#+NAME: render_img_with_color_if_ray_hit_triangle
+#+BEGIN_SRC lua
+  for r = 1, 64 do
+    for c = 1, 64 do
+       local inside = test_ray_triangle_intersection(P, directions[r + (c-1)*64 ],A,B,C)
+       if (inside) then
+          img:set(r,c, Vec.new(255,0,0))
+       end
+    end
+  end
+#+END_SRC
+
+The rendered result like:
+
+[[file:../triangle.ppm]]

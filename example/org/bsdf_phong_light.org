@@ -1,0 +1,43 @@
+
+#+BEGIN_SRC emacs-lisp :eval yes :results silent
+  (org-babel-lob-ingest "./bsdf_lambert.org")
+#+END_SRC
+
+
+
+* Main Code Block
+#+BEGIN_SRC lua :tangle ../bsdf_phong.lua
+  <<deps>>
+  <<FN:m_to_pixel>>
+  <<prepare_view_and_scene>>
+  <<prepare_ray>>
+  <<prepare_light>> 
+  <<bsdf>>
+  <<precompute_triangle_wight_coordinate_and_normal>>
+
+  <<FN:test_ray_trangle_intersection>>
+  <<FN:BSDF>>
+  <<render>>
+  viewport:save("triangle_phong.ppm")
+#+END_SRC
+
+* FN:BSDF
+#+NAME: FN:BSDF
+#+BEGIN_SRC  lua
+  function BSDF(L_i, L_o, surfaceInfo)
+    local attenuation
+    <<phong_bsdf>>
+    return attenuation
+  end
+#+END_SRC
+
+#+NAME: phong_bsdf
+#+BEGIN_SRC  lua
+  local R = L_i - 2 * (L_i * surfaceInfo.normal) * surfaceInfo.normal
+  local shinness = 3
+
+  local ratio = math.max((R:dot(L_o)), 0)^ shinness  * 1e10
+  attenuation = Vec.new(ratio, ratio, ratio)
+#+END_SRC
+
+[[../triangle_phong.ppm]]

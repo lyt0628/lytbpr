@@ -1,6 +1,6 @@
 -- Main Code Block
 
--- [[file:org/bsdf_lambert.org::*Main Code Block][Main Code Block:1]]
+-- [[file:org/bsdf_phong_light.org::*Main Code Block][Main Code Block:1]]
 require("conf_path")
 local Vec = require("vec")
 local Mat = require("mat")
@@ -85,7 +85,11 @@ function test_ray_triangle_intersection(P, d, A, N)
 end
 function BSDF(L_i, L_o, surfaceInfo)
   local attenuation
-  attenuation = Vec.new(5, 50, 5) * 1e7
+  local R = L_i - 2 * (L_i * surfaceInfo.normal) * surfaceInfo.normal
+  local shinness = 3
+  
+  local ratio = math.max((R:dot(L_o)), 0)^ shinness  * 1e10
+  attenuation = Vec.new(ratio, ratio, ratio)
   return attenuation
 end
 for r = 1, 512 do
@@ -121,5 +125,5 @@ for r = 1, 512 do
      end
   end
 end
-viewport:save("triangle_lambert.ppm")
+viewport:save("triangle_phong.ppm")
 -- Main Code Block:1 ends here

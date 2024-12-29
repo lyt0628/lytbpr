@@ -2,8 +2,8 @@
 
 
 
--- [[file:../org_example/ray_triangle_intersection.org::+BEGIN_SRC lua :tangle ../example/ray_triangle_intersection.lua][No heading:1]]
-package.path = package.path .. ";" .. "../src/util/?.lua"
+-- [[file:org/ray_triangle_intersection.org::+BEGIN_SRC lua :tangle ../ray_triangle_intersection.lua][No heading:1]]
+require("conf_path")
 local Vec = require("vec")
 local Mat = require("Mat")
 
@@ -14,14 +14,15 @@ local d = Vec.new(1, 1, 1):normlized()
 local A = Vec.new(1, 0, 0)
 local B = Vec.new(0, 1, 0)
 local C = Vec.new(0, 0, 1)
+
 function test_ray_triangle_intersection(P, d, A, B, C)
       local AB = B - A
       local AC = C - A
       local N = Vec.cross3(AB, AC)
       local AB_o = Vec.cross3(N, AB)
       local AC_o = Vec.cross3(N, AC)
-      local AB_o = AB_o / (AC:dot(AB_o))
-      local AC_o = AC_o / (AB:dot(AC_o))
+      AB_o = AB_o / (AC:dot(AB_o))
+      AC_o = AC_o / (AB:dot(AC_o))
       local u = N:dot(d)
       
       if(u == 0) then
@@ -41,13 +42,11 @@ function test_ray_triangle_intersection(P, d, A, B, C)
         print("Ray miss plane")
         return false
       end
+      local Q = P + t * d
       
-      
-      Q = P + t * d
-      
-      c = (Q - C):dot(AC_o)
-      b = (Q - B):dot(AB_o)
-      a = 1 - (b + c)
+      local c = (Q - C):dot(AC_o)
+      local b = (Q - B):dot(AB_o)
+      local a = 1 - (b + c)
       
       if a < 0 or a > 1 or b < 0 or b > 1 or c < 0 or c > 1 then
         print("Out of triangle,", a, b, c)
