@@ -2,7 +2,7 @@
 
 * Code
 ** Module
-#+BEGIN_SRC lua :tangle ../../src/util/fp.lua
+#+BEGIN_SRC lua :tangle ../../../src/util/fp.lua
   <<M>>
   return M
 #+END_SRC

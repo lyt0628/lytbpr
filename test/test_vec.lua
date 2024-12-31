@@ -1,6 +1,7 @@
 -- Module
 
--- [[file:../../org_test/util/test_vec.org::*Module][Module:1]]
+-- [[file:../org/test/util/test_vec.org::*Module][Module:1]]
+require("conf_path")
 local Vec = require("vec")
 v3 = Vec.new(1, 2, 3)
 assert(1==v3:get(1))

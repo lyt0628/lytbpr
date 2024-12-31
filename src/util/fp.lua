@@ -1,6 +1,6 @@
 -- Module
 
--- [[file:../../org/util/fp.org::*Module][Module:1]]
+-- [[file:../../org/src/util/fp.org::*Module][Module:1]]
 local M = {}
 function M.any(t, fn)
    local result = false

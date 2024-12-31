@@ -1,6 +1,6 @@
 -- Module
 
--- [[file:../../org/util/vec.org::*Module][Module:1]]
+-- [[file:../../org/src/util/vec.org::*Module][Module:1]]
 local luautil = require("luautil")
 local fp = require("fp")
 local M = {}
@@ -185,6 +185,9 @@ function M:concat(other)
 end 
 function M:maxcomp()
    return fp.max(self.elems, function(a, b) return a > b end)
+end
+function M:mincomp()
+   return fp.max(self.elems, function(a, b) return a < b end)
 end
 function M:valid()
    return fp.all(self.elems, luautil.is_num)

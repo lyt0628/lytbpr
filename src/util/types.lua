@@ -1,6 +1,6 @@
 -- Module
 
--- [[file:../../org/util/types.org::*Module][Module:1]]
+-- [[file:../../org/src/util/types.org::*Module][Module:1]]
 local M = {}
 local Vec = require("vec")
 M.Point = Vec

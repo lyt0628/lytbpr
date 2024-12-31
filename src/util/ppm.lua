@@ -1,7 +1,7 @@
 -- Module Definition
 -- Let us use Lua Module to define the Vec type. 
 
--- [[file:../../org/util/ppm.org::*Module Definition][Module Definition:1]]
+-- [[file:../../org/src/util/ppm.org::*Module Definition][Module Definition:1]]
 local Vec = require("vec")
 local PPM = {}
 PPM.__index = PPM

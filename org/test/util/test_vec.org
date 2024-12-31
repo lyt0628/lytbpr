@@ -1,8 +1,10 @@
 
 
+
 * Code
 ** Module
-#+BEGIN_SRC lua :tangle ../../src/util/test_vec.lua  
+#+BEGIN_SRC lua :tangle ../../../test/test_vec.lua
+  require("conf_path")
   local Vec = require("vec")
   <<test_cases>>
 #+END_SRC

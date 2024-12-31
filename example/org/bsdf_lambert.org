@@ -22,7 +22,7 @@ See [[compute_color_and_set_as_pixel]].
 The rendered result like:
 
 
-[[file:../example/triangle_lambert.ppm]]
+[[file:../triangle_lambert.ppm]]
 
 
 +y Down

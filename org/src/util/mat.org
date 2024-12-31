@@ -68,7 +68,7 @@ multiply or divide self with other vector by , and return the result. The parame
 * Code
 
 ** Module
-#+BEGIN_SRC lua :tangle ../../src/util/mat.lua  :comments both 
+#+BEGIN_SRC lua :tangle ../../../src/util/mat.lua  :comments both 
   local luautil = require "luautil"
   local Vec = require "Vec"
 

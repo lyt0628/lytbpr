@@ -3,14 +3,14 @@
 
 * Examples
 ** Ray-Triangle Intersection
-Document: [[./org_example/ray_triangle_intersection.org]]
+Document: [[./example/org/ray_triangle_intersection.org]]
 
 Result:
 
 [[./example/triangle.png]]
 
 ** Lambert Triangle
-Document: [[./org_example/bsdf_lambert.org]]
+Document: [[./example/org/bsdf_lambert.org]]
 
 Result:
 
@@ -23,3 +23,11 @@ Document: [[./org_example/bsdf_blinn_phong.org]]
 Result:
 
 [[./example/triangle_blinn_phong.png]]
+
+
+** Phong Triangle
+Document: [[./example/org/bsdf_phong_light.org]]
+
+Result:
+
+[[./example/triangle_phong.png]]

@@ -1,0 +1,286 @@
+
+
+* 爲什麼使用 DDS 格式
+DDS 格式不是常用的格式，但是格式簡單, 並且支持透明通道. 前面我們討論的 [[ppm.org][PPM | P3]] 格式更爲簡單，但是不支持透明通道。
+在一些需要表現透明通道的地方，像是透明貼圖，PPM 就無法使用。
+在支持透明通道的圖像格式中DDS最爲簡單，因此我們使用DDS。
+
+* DDS 文件的二進制佈局
+我們用一個 Map 來展示 DDS 文件的磁盤佈局. 左邊是這部分數據的名稱，右邊是這部分數據的大小.
+
+#+BEGIN_SRC plantuml :file ./asset/dds_layout.png :eval yes
+  @startjson
+  {
+          "魔數" : "DWORD, DDS<SPACE> 四個字符",
+          "頭部數據": "124 bytes",
+          "數據" : "字節數組,大小由頭部的 寬度* 高度得到"
+  }
+  @endjson
+#+END_SRC
+
+#+RESULTS:
+[[file:./asset/dds_layout.png]]
+
+
+魔數 是文件格式中常用的標識自己文件的一個ID。也就是說，當看到文件有 DDS 魔數存在時。
+我們就基本上可以判斷這個文件就是 DDS格式的文件。
+DDS 文件的魔數是 DWORD 大小的 字符串 "DDS ".注意末尾有一個空格，使得整體大小爲
+32比特，即DOWRD（雙字）。
+#+BEGIN_SRC lua :tangle ../../../src/util/dds.lua 
+  local luautil = require "luautil"
+  local Vec = require "vec"
+  local M = {}
+  M.__index = M
+  M.magic = "DDS" .. " "
+  <<module_definition>>
+  return M
+#+END_SRC
+
+* 頭部信息
+- Note taken on [2024-12-31 周二 12:45]
+和其它圖像格式一樣， DDS 使用一個頭部來記錄內埔數據的元數據，爲進一步處理提供信息。
+我們在構造DDS圖像的時候需要爲他填充這部分頭部信息。
+#+BEGIN_SRC lua :noweb-ref module_definition
+  function M.new(width,height)
+     local img = {}
+     <<init_img>>
+     setmetatable(img, M)
+     return img
+  end
+#+END_SRC
+
+
+我們有一個 Map 來展示 DDS 文件的磁盤佈局. 然後按章節逐一描述它們。
+左邊是這部分數據的名稱，右邊是這部分數據的大小, 按微軟的習慣來。
+#+BEGIN_SRC plantuml :file ./asset/dds_header.png :eval yes
+  @startjson
+  {
+          "頭部大小" : "DWORD, 固定爲 124",
+          "標誌位" : "DWORD, 一共32位",
+          "圖像高度" : "DWORD",
+          "圖像寬度" : "DOWRD",
+          "Pitch(紋理一行像素所佔字節數) 或者 線性大小" : "DWORD",
+          "圖像深度值" : "DWORD",
+          "Mipmap 層級" : "DWORD",
+          "保留空間" : "DWORD[11], 不被使用",
+          "像素格式" : "對於內存空間的二級定義,取值不同會影響後面的內存佈局",
+          "Cap[4]" : "4個Cap, 每個都是DWORD 大小",
+          "第二個保留空間" : "DWORD, 不被使用"
+  }
+  @endjson
+#+END_SRC
+
+#+RESULTS:
+[[file:./asset/dds_header.png]]
+
+
+頭部大小包含頭部信息的大小, DDS 頭部的數據結構是固定的，因此大小是不變的，爲124。
+對於其它的文件類型，需要這個信息來告訴解析程序頭部的大小，來計算紋理數據所在的位置，才能進行讀取。
+#+BEGIN_SRC lua :noweb-ref init_img
+  img.header = {}
+  img.header.header_size = 124
+#+END_SRC
+頭部信息包含有紋理的寬度和高度
+#+BEGIN_SRC lua :noweb-ref init_img
+  img.header.height = assert(height, "Height of DDS is required")
+  img.header.width = assert(width, "Height of DDS is required")
+
+  img.height = img.header.height
+  img.width = img.header.width
+#+END_SRC
+
+標幟位向解析程序提供了 "該DDS文件是否是..." 的信息.
+一共有如下幾個標誌
+|------------------------------------+----------------------------------+----------|
+| 是否有額外數據存儲的地方(Caps)              | 必須置位                            |      0x1 |
+|------------------------------------+----------------------------------+----------|
+| 是否有圖像高度信息                        | 必須置位                            |      0x2 |
+|------------------------------------+----------------------------------+----------|
+| 是否有圖像寬度信息                        | 必須置位                            |      0x4 |
+|------------------------------------+----------------------------------+----------|
+| 是否有圖像一行像素數據的字節長度（pitch）這個信息 | 當儲存的紋理沒有經過壓縮時 置位             |      0x8 |
+|------------------------------------+----------------------------------+----------|
+| 是否有像素格式信息                        | 必須置位                            |   0x1000 |
+|------------------------------------+----------------------------------+----------|
+| 是否有Mipmap層級信息                    | 當圖像爲Mipmap 紋理時置位               |  0x20000 |
+|------------------------------------+----------------------------------+----------|
+| 是否提供線性大小的信息                     | 當儲存的紋理經過壓縮，並且提供Pitch的時候 置位 |  0x80000 |
+|------------------------------------+----------------------------------+----------|
+| 是否提供深度信息                         | 當儲存的圖像是 3D 紋理的時候置位           | 0x800000 |
+|------------------------------------+----------------------------------+----------|
+
+#+BEGIN_SRC lua :noweb-ref init_img
+  img.header.flags = 0x1 | 0x2 | 0x4 | 0x1000
+  -- 我們的圖像現在只支持不壓縮的圖片
+  img.header.flags = img.header.flags | 0x8
+#+END_SRC
+
+
+圖像一行像素所佔字節數目, 也稱行間距。
+在經過壓縮的紋理中，這個位置存儲的是線性空間大小,即整個圖像大小.
+我們只支持 RGBA 四通道的圖像，所以行間距 就是 寬度 乘以 4
+#+BEGIN_SRC lua :noweb-ref init_img
+  img.header.pitch = width * 4
+#+END_SRC
+
+圖像深度 這一贖屬性，只有當圖像是 3D 紋理是才有用。記錄圖像的 W 坐標。
+對於 2D 紋理，我們簡單的將其設置 0 即可。
+
+
+
+Cap0 也是一個標誌位, 用於指示紋理的複雜度。我們只使用最簡單的紋理，將它設置爲 0x1000 即可。
+#+BEGIN_SRC lua :noweb-ref init_img
+  img.header.cap = 0x1000
+#+END_SRC
+
+
+
+準備好頭部信息後, 我們根據用戶提供的通道數目和紋理尺寸來初始化數據。
+#+BEGIN_SRC lua :noweb-ref init_img
+  img.pixels = {}
+  local vproto = Vec.new(0,0,0,0)
+
+  for i = 1, width*height do
+     table.insert(img.pixels, vproto)
+  end
+#+END_SRC
+
+
+
+
+* 像素格式信息
+#+BEGIN_SRC plantuml :file ./asset/dds_pixel_format.png :eval yes
+  @startjson
+  {
+          "顏色格式結構體大小" : "DWORD, 固定爲 32(字節)",
+          "標誌位" : "DWORD",
+          "四CC編碼" : "DWORD, 標識像素編碼的類型",
+          "R 通道掩碼" : "DWORD, 與顏色值相與得到 R 通道",
+          "G 通道掩碼" : "DWORD, 與顏色值相與得到 G 通道",
+          "B 通道掩碼" : "DWORD, 與顏色值相與得到 B 通道",
+          "A 通道掩碼" : "DWORD, 與顏色值相與得到 A 通道"
+  }
+  @endjson
+#+END_SRC
+
+#+RESULTS:
+[[file:./asset/dds_pixel_format.png]]
+
+標誌位
+
+
+四CC編碼 是一個 DWORD 大小的字符串，一般用可讀的方式表示編碼方式。DDS 中
+四CC編碼 用來標識壓縮方式。我們圖像不壓縮，隨便拿4個字符串佔位就好。
+
+事實上，標誌位 0x4 指示, 四CC編碼是否可用，也就是標誌 圖像是否經過壓縮。
+只要我們不打開這個標誌位，四CC 的值根本就不會被讀取。
+
+#+BEGIN_SRC lua :noweb-ref init_img
+  img.header.pixel_format = {}
+  img.header.pixel_format.size = 32
+  img.header.pixel_format.flags = 0x1 | 0x40
+  img.header.pixel_format.fourcc = "BGR1"
+
+#+END_SRC
+標誌位中 0x1 指示 DDS 文件擁有透明通道， 0x40 指示 DDS 文件擁有 RGB 通道
+
+
+
+
+我們已經給出了每行顏色的比特數目，DDS 還有求我們提供 RGBA通道 的總比特數目，顯然 對於我們的 8位 圖像就是 32 了。
+#+BEGIN_SRC lua :noweb-ref init_img
+  img.header.pixel_format.rgb_bit_count = 32
+  img.header.pixel_format.bitmask_a = 0xFF000000
+  img.header.pixel_format.bitmask_r = 0x00FF0000
+  img.header.pixel_format.bitmask_g = 0x0000FF00
+  img.header.pixel_format.bitmask_b = 0x000000FF
+#+END_SRC
+
+
+* 用於儲存2D紋理的DDS
+* 用於儲存3D紋理的DDS
+* 用於儲存體積紋理的DDS
+* 進行了壓縮的DDS
+* 四CC 編碼爲 DTX10 時候的 DDS 
+
+* 保存邏輯
+
+#+BEGIN_SRC lua :noweb-ref module_definition
+  function M:save(path)
+     local f = assert(io.open(path, "wb"))
+
+     f:write(M.magic)
+
+     local header = self.header
+     local format = header.pixel_format
+     f:write(luautil.to_bint(header.header_size, 4))
+   --  print("Header Size: ", header.header_size)
+
+
+     f:write(luautil.to_bint(header.flags, 4))
+     f:write(luautil.to_bint(header.height, 4))
+     f:write(luautil.to_bint(header.width, 4))
+     f:write(luautil.to_bint(header.pitch, 4))
+     f:write(luautil.to_bint(0, 4)) -- Depth
+     f:write(luautil.to_bint(0, 4)) -- Mipmap
+     f:write(luautil.to_bint(0, 4 * 11)) -- Reversed
+
+     -- pixel_format
+     f:write(luautil.to_bint(format.size, 4))
+   --  print("Header Size: ", format.size)
+     f:write(luautil.to_bint(format.flags, 4))
+     f:write(format.fourcc)
+     f:write(luautil.to_bint(format.rgb_bit_count, 4))
+     f:write(luautil.to_bint(format.bitmask_r, 4))
+     f:write(luautil.to_bint(format.bitmask_g, 4))
+     f:write(luautil.to_bint(format.bitmask_b, 4))
+     f:write(luautil.to_bint(format.bitmask_a, 4))
+     -- end pixel_format
+
+
+     f:write(luautil.to_bint(header.cap, 4)) -- Cap0 
+     f:write(luautil.to_bint(0, 4)) -- Cap2 
+     f:write(luautil.to_bint(0, 4)) -- Cap3 
+     f:write(luautil.to_bint(0, 4)) -- Cap3
+     f:write(luautil.to_bint(0, 4)) -- Reversed 
+
+   --  f:write(luautil.to_bint( 4 + 124 + 4 + 4 , 4))
+   --  f:write(luautil.to_bint( 4 + 124 + 4 + 4 , 4))
+
+     for _, v in ipairs(self.pixels) do
+        f:write(luautil.to_bint(v:b(), 1))
+        f:write(luautil.to_bint(v:g(), 1))
+        f:write(luautil.to_bint(v:r(), 1))
+        f:write(luautil.to_bint(v:a(), 1))
+      --  print(v:r(),v:g(),v:b(),v:a())
+     end
+
+     f:close()
+  end
+#+END_SRC
+
+
+
+* get & set
+ 最後，我們向程序提供接口來訪問 圖像像素
+#+begin_src lua :noweb-ref module_definition
+  function M:set(row, col, color)
+      assert(row > 0 or row <= self.header.height, "Row out of bound!")
+      assert(col > 0 or col <= self.header.width, "Col out of bound!")
+      self.pixels[col + (row - 1) * self.width] = color
+  end
+#+end_src
+
+set() for accessing a pixel
+#+begin_src lua :noweb-ref module_definition
+  function M:get(row, col)
+      assert(row > 0 or row <= self.header.height, "Row out of bound!")
+      assert(col > 0 or col <= self.header.width, "Col out of bound!")
+      return self.pixels[col + (row - 1) * self.header.width] 
+  end
+#+end_src
+
+
+
+* 爲了滿足 Tangling 所需要的代碼快
+** 導出代碼塊

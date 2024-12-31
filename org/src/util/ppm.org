@@ -17,7 +17,7 @@ PPM, especially, P3 with a simple format as following:
 
 * Module Definition
 Let us use Lua Module to define the Vec type. 
-#+BEGIN_SRC lua :tangle ../../src/util/ppm.lua 
+#+BEGIN_SRC lua :tangle ../../../src/util/ppm.lua 
   local Vec = require("vec")
   <<PPM_definition>>
   return PPM

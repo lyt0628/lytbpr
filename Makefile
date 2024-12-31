@@ -1,6 +1,6 @@
 test:
-	cd src/util && make test
-	cd example && make test
+	cd test && make test
+	cd example && make
 
 
 .PHONY: test

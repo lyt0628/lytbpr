@@ -73,8 +73,10 @@ vector.
 
 
 * Code
+
+
 ** Module
-#+BEGIN_SRC lua :tangle ../../src/util/vec.lua
+#+BEGIN_SRC lua :tangle ../../../src/util/vec.lua
   local luautil = require("luautil")
   local fp = require("fp")
   <<M>>

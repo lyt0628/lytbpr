@@ -1,6 +1,6 @@
 * Code
 ** Module
-#+BEGIN_SRC lua :tangle ../../src/util/ray.lua
+#+BEGIN_SRC lua :tangle ../../../src/util/ray.lua
   local luautil = require("luautil")
   local fp = require("fp")
   <<M>>
